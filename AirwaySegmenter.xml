@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<executable>
+    <category>Segmentation</category>
+    <title>Airway segmentation</title>
+    <description><![CDATA[Semi-automatically extracts the airway from a CT image.]]></description>
+    <version>1.0</version>
+    <documentation-url>TO DO !!!!!</documentation-url>
+    <license></license>
+    <contributor>Marc Niethammer, Yi Hong, Johan Andruejol</contributor>
+    <acknowledgements><![CDATA[TO DO !!!!!!]]></acknowledgements>
+
+    <parameters>
+        <label>Input/Output</label>
+        <description><![CDATA[Input/Output Parameters]]></description>
+
+        <image>
+            <name>inputImage</name>
+            <label>Input Image</label>
+            <channel>input</channel>
+            <index>0</index>
+            <default>None</default>
+            <description><![CDATA[Input image to be segmented.]]></description>
+        </image>  
+
+        <image>
+            <name>outputImage</name>
+            <label>Output Image</label>
+            <channel>output</channel>
+            <index>1</index>
+            <default>None</default>
+            <description><![CDATA[Segmented output image.]]></description>
+        </image>
+
+        <geometry>
+          <name>outputGeometry</name>
+          <label>Output Geometry</label>
+          <channel>output</channel>
+          <index>2</index>
+          <description><![CDATA[Segmented surface image.]]></description>
+        </geometry>
+    </parameters>
+    
+    <parameters>
+        <label>Segmentation Seeds</label>
+        <description><![CDATA[Used for automatically leave the
+        lungs out of the segmentation.]]>
+        </description>
+        
+        <point multiple="false" coordinateSystem="ras">
+            <name>lowerSeed</name>
+            <label>Lower Seed</label>
+            <longflag>--lowerSeed</longflag>
+            <description><![CDATA[Usualy placed at the carina of the trachea, this point is the center of the sphere that helps cutting the lungs apart from the airway.]]>.</description>
+            <default>0,0,0</default>
+        </point>
+        <double>
+            <name>lowerSeedRadius</name>
+            <label>Lower Seed's radius</label>
+            <longflag>--lowerSeedRadius</longflag>
+            <default>20.0</default>
+            <minimum>5.0</minimum>
+            <maximum>50.0</maximum>
+            <description><![CDATA[The radius of the lower seed.]]></description>
+        </double>
+        
+        <point multiple="false" coordinateSystem="ras">
+            <name>upperSeed</name>
+            <label>Upper Seed</label>
+            <longflag>--upperSeed</longflag>
+            <description><![CDATA[Point placed whithin the airway. It should be placed in the broadest airway region in order to help to identify it.]]></description>
+            <default>0,0,0</default>
+        </point>
+        <double>
+            <name>upperSeedRadius</name>
+            <label>Upper Seed's radius</label>
+            <longflag>--upperSeedRadius</longflag>
+            <default>20.0</default>
+            <minimum>5.0</minimum>
+            <maximum>50.0</maximum>
+            <description><![CDATA[The radius of the upper seed.]]></description>
+        </double>
+    </parameters>
+
+    <parameters advanced="true">
+        <label>Advanced Algorithm Settings</label>
+        <description><![CDATA[Advanced algorithm settings. Default should be good enough for most purposes]]></description>
+
+        <double>
+            <name>dMaxAirwayRadius</name>
+            <longflag>--maxAirwayRadius</longflag>
+            <label>Airway maximum radius</label>
+            <default>9</default>
+            <description><![CDATA[Maximal radius for morphological closing (in mm). Should be set roughly a little larger than the maximal expected radius for the airway.]]></description>
+        </double>
+
+        <double>
+            <name>dErodeDistance</name>
+            <longflag>--erodeDistance</longflag>
+            <label>Erosion distance</label>
+            <default>2</default>
+            <description><![CDATA[Erosion distance from estimate of the outer skin layer (in mm) to prevent leaking of the segmetnation out of the nose.]]></description>
+        </double>
+
+        <integer>
+            <name>iMaximumNumberOfCVIterations</name>
+            <longflag>--maxNumberOfCVIterations</longflag>
+            <label>Maximum number of Chan Vese iterations.</label>
+            <default>-1</default>
+            <description><![CDATA[Maximum number of Chan Vese iterations (to smooth the final Otsu-thresholding result). If set to a negative value won't be used.]]></description>
+        </integer>
+
+        <double>
+            <name>dCVLambda</name>
+            <longflag>--lambda</longflag>
+            <label>Smoothing parameter for Chan Vese segmentation.</label>
+            <default>0.1</default>
+            <description><![CDATA[Smoothing parameter for Chan Vese segmentation. The larger the smoother.]]></description>
+        </double>
+
+        <integer>
+            <name>iComponent</name>
+            <longflag>--component</longflag>
+            <label>Airway manual label</label>
+            <default>-1</default>
+            <description><![CDATA[Use this to manualy choose the possible airway label. If the value is inferior to 0, it won't be used.]]></description>
+        </integer>
+    </parameters>
+
+    <parameters advanced="true">
+        <label>Maxillary Sinus Removal</label>
+        <description><![CDATA[Advanced settings used to remove the maxillary sinuses.]]></description>
+        <boolean>
+            <name>bRemoveMaxillarySinuses</name>
+            <longflag>--removeMaxillarySinuses</longflag>
+            <label>Remove Maxillary Sinuses</label>
+            <default>False</default>
+            <description><![CDATA[Choose whether or not to remove the maxillary sinuses.]]></description>
+        </boolean>
+        <point multiple="true" coordinateSystem="ras">
+            <name>maxillarySinusesSeeds</name>
+            <label>Maxillary Sinuses Seeds</label>
+            <longflag>--maxillarySinusesSeed</longflag>
+            <description><![CDATA[Point placed whithin the maxillary sinuses.]]></description>
+            <default>None</default>
+        </point>
+        <double>
+            <name>maxillarySinusesSeedsRadius</name>
+            <label>Maxillary Sinuses Seed's radius</label>
+            <longflag>--maxillarySinusesRadius</longflag>
+            <default>5.0</default>
+            <minimum>0.1</minimum>
+            <maximum>50.0</maximum>
+            <description><![CDATA[The radius of all the maxillary sinuses seeds.]]></description>
+        </double>
+        <double>
+            <name>erosionPercentage</name>
+            <label>Erosion for the maxillary removal</label>
+            <longflag>--erosionPercentage</longflag>
+            <constraints>
+              <default>0.20</default>
+              <minimum>0</minimum>
+              <maximum>1</maximum>
+              <step>.01</step>
+            </constraints>
+            <description><![CDATA[The percentage of the erode distance used during removal of the maxillary sinuses.]]></description>
+        </double>
+    </parameters>
+
+    <parameters advanced="true">
+        <label>Advanced Debug Settings</label>
+        <description><![CDATA[Advanced debug settings. Used only for debugging.]]></description>
+
+        <boolean>
+            <name>bNoWarning</name>
+            <longflag>--noWarning</longflag>
+            <label>Break on warning</label>
+            <default>true</default>
+            <description><![CDATA[Choose whether or not the execution stop if a warning is found.]]></description>
+        </boolean>
+        
+        <boolean>
+            <name>bDebug</name>
+            <longflag>--debug</longflag>
+            <label>Output debug informations</label>
+            <default>false</default>
+            <description><![CDATA[Choose whether or not to output the debug informations and images.]]></description>
+        </boolean>
+        
+        <string>
+            <name>sDebugFolder</name>
+            <longflag>--debugFolder</longflag>
+            <label>Destination folder for debug images</label>
+            <default>None</default>
+            <description><![CDATA[Used only if Debug on. Choose the destination folder of the images.]]></description>
+        </string>
+    </parameters>
+
+    <parameters advanced="true">
+        <label>Optionnal Output</label>
+        <description><![CDATA[Optionnal output. Those output will not be loaded automatically in Slicer]]></description>
+
+        <boolean>
+            <name>bRAIImage</name>
+            <longflag>--RAIImage</longflag>
+            <label>Write RAI image</label>
+            <default>false</default>
+            <description><![CDATA[Output the image in RAI coordinates. If the input image is not in RAI coordinates, then it will be resampled.]]></description>
+        </boolean>
+
+        <string>
+            <name>sRAIImagePath</name>
+            <longflag>--RAIImagePath</longflag>
+            <label>Destination folder for RAI image</label>
+            <default>None</default>
+            <description><![CDATA[Used only if "Write RAI image" is on. Choose the output path of the RAI image.]]></description>
+        </string>
+    </parameters>
+
+</executable>
+
