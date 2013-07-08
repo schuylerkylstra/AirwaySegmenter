@@ -5,7 +5,7 @@
 //  you may not use this file except in compliance with the License.
 //  You may obtain a copy of the License at
 //
-//      http://www.apache.org/licenses/LICENSE-2.0 
+//      http://www.apache.org/licenses/LICENSE-2.0
 //
 //  Unless required by applicable law or agreed to in writing, software
 //  distributed under the License is distributed on an "AS IS" BASIS,
@@ -298,7 +298,7 @@ template<class T> int
 template<class T> int DoIt(int argc, char* argv[], T)
 {
   //--
-  //-- Typedefs 
+  //-- Typedefs
   //--
   
   typedef float TFloatType;
@@ -810,10 +810,17 @@ template<class T> int DoIt(int argc, char* argv[], T)
   if (iComponent <= 0)
     {
     componentNumber = LabelIt<T>(relabel->GetOutput(),
-                                            lowerSeed,
-                                            lowerSeedRadius,
+                                            upperSeed,
+                                            upperSeedRadius,
                                             bDebug);
-    //std::cout<<"Label found = "<<componentNumber<<std::endl;
+    if (componentNumber <= 0 )
+      {
+      componentNumber = LabelIt<T>(relabel->GetOutput(),
+                                              lowerSeed,
+                                              lowerSeedRadius,
+                                              bDebug);
+      }
+    std::cout<<"Label found = "<<componentNumber<<std::endl;
     }
   else
     {
@@ -1015,9 +1022,16 @@ template<class T> int DoIt(int argc, char* argv[], T)
   if (iComponent <= 0)
     {
     componentNumber = LabelIt<T>(relabelFinal->GetOutput(),
+                            upperSeed,
+                            upperSeedRadius,
+                            bDebug);
+    if ( componentNumber <= 0 )
+      {
+	componentNumber = LabelIt<T>(relabelFinal->GetOutput(),
                             lowerSeed,
                             lowerSeedRadius,
                             bDebug);
+      }
     //std::cout<<"Label found = "<<componentNumber<<std::endl;
     }
   else
@@ -1472,11 +1486,18 @@ template<class T> int DoIt(int argc, char* argv[], T)
                             upperSeed,
                             upperSeedRadius,
                             bDebug);
-    std::cout<<"Label found = "<<componentNumber<<std::endl;
+    if (nNumAirway <= 0 )
+      {
+      nNumAirway = LabelIt<T>(relabelFinalWithoutLung->GetOutput(),
+                              lowerSeed,
+                              lowerSeedRadius,
+                              bDebug);
+      }
+    std::cout<<"Label found = "<<nNumAirway<<std::endl;
     }
   else
     {
-    nNumAirway = componentNumber;
+    nNumAirway = iComponent;
     }
 
   //Check if the maximum label found is 0,

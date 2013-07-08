@@ -157,7 +157,7 @@
             <label>Erosion for the maxillary removal</label>
             <longflag>--erosionPercentage</longflag>
             <constraints>
-              <default>0.10</default>
+              <default>0.20</default>
               <minimum>0</minimum>
               <maximum>1</maximum>
               <step>.01</step>

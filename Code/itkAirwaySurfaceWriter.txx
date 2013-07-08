@@ -122,7 +122,7 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
     fastMarching->SetOutputRegion( this->m_pMaskImage->GetBufferedRegion() );
     fastMarching->SetOutputSpacing( this->m_pMaskImage->GetSpacing() );
     fastMarching->SetOutputOrigin( this->m_pMaskImage->GetOrigin() );
-    fastMarching->SetStoppingValue( 1.0 );
+    fastMarching->SetStoppingValue( 3.0 );
 
     fastMarching->Update();
 
@@ -183,7 +183,7 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
 
     	try
       	{
-      		writerSample->Update(); 
+      		writerSample->Update();
       	}
     	catch ( itk::ExceptionObject & excep )
       	{
