@@ -352,20 +352,20 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
 
   //Apply VTK Filter
   vtkSmartPointer<vtkContourFilter> contourFilter = vtkContourFilter::New();
-  contourFilter->SetInput(toVTKFilter->GetOutput());
+  contourFilter->SetInputData(toVTKFilter->GetOutput());
   contourFilter->SetValue(0, this->m_dThreshold);
   contourFilter->Update();
 
   // Get the largest connectivity
   vtkSmartPointer<vtkPolyDataConnectivityFilter> connectivityFilter = vtkPolyDataConnectivityFilter::New();
-  connectivityFilter->SetInput(contourFilter->GetOutput());
+  connectivityFilter->SetInputConnection(contourFilter->GetOutputPort());
   connectivityFilter->SetExtractionModeToLargestRegion();
   connectivityFilter->Update();
   
   /*
   // smooth meshes
   vtkSmartPointer<vtkSmoothPolyDataFilter> smoothFilter = vtkSmoothPolyDataFilter::New();
-  smoothFilter->SetInput(connectivityFilter->GetOutput());
+  smoothFilter->SetInputConnection(connectivityFilter->GetOutputPort());
   smoothFilter->SetNumberOfIterations(100);
   smoothFilter->Update();
   */  
@@ -377,8 +377,8 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
   
   vtkSmartPointer<vtkTransformPolyDataFilter> transformer = 
     vtkTransformPolyDataFilter::New();
-  transformer->SetInput(connectivityFilter->GetOutput());
-  //transformer->SetInput(smoothFilter->GetOutput());
+  transformer->SetInputConnection(connectivityFilter->GetOutputPort());
+  //transformer->SetInputConnection(smoothFilter->GetOutputPort());
   transformer->SetTransform(transform);
   transformer->Update();
   
@@ -386,11 +386,7 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
   vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
   writer->SetFileName(this->m_FileName.c_str());
 
-#if VTK_MAJOR_VERSION <= 5
-  writer->SetInput(transformer->GetOutput());
-#else
-  writer->SetInputData(transformer->GetOutput());
-#endif
+  writer->SetInputConnection(transformer->GetOutputPort());
 
   writer->Write();
 }
