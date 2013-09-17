@@ -1660,19 +1660,19 @@ int main( int argc, char * argv[] )
         std::cout<<"Char images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::USHORT:
-				ret = DoIt( argc, argv, static_cast<unsigned short>(0) );
+				std::cout<<"Unsigned short images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::SHORT:
 				ret = DoIt( argc, argv, static_cast<short>(0) );
 				break;
 			case itk::ImageIOBase::UINT:
-				ret = DoIt( argc, argv, static_cast<unsigned int>(0) );
+				std::cout<<"Unsigned int images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::INT:
 				ret = DoIt( argc, argv, static_cast<int>(0) );
 				break;
 			case itk::ImageIOBase::ULONG:
-				ret = DoIt( argc, argv, static_cast<unsigned long>(0) );
+				std::cout<<"Unsigned long images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::LONG:
 				ret = DoIt( argc, argv, static_cast<long>(0) );
