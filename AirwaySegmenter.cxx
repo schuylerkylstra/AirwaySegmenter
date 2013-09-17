@@ -1654,10 +1654,10 @@ int main( int argc, char * argv[] )
 		switch( inputComponentType )
 		{
 			case itk::ImageIOBase::UCHAR:
-				ret = DoIt( argc, argv, static_cast<unsigned char>(0) );
+        std::cout<<"Unsigned char images not supported"<< std::endl;
 				break;
 			case itk::ImageIOBase::CHAR:
-				ret = DoIt( argc, argv, static_cast<char>(0) );
+        std::cout<<"Char images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::USHORT:
 				ret = DoIt( argc, argv, static_cast<unsigned short>(0) );
