@@ -32,14 +32,13 @@
 #include "AirwaySegmenterCLP.h"
 #include "AirwaySegmenterConfig.h"
 #include "AirwaySegmenter.hxx"
+#include "ProgramArguments.h"
 
 #include "itkAirwaySurfaceWriter.h"
 #include "itkMaskedOtsuThresholdImageFilter.h"
 
-
 namespace
 {
-
 	int outputAllSettings(int argc, char* argv[])
 	{
 		PARSE_ARGS;
@@ -97,6 +96,36 @@ int main( int argc, char * argv[] )
 
 	PARSE_ARGS;
 
+  AirwaySegmenter::ProgramArguments args;
+  args.inputImage     = inputImage;
+  args.outputImage    = outputImage;
+  args.outputGeometry = outputGeometry;
+
+  args.lowerSeed       = lowerSeed;
+  args.lowerSeedRadius = lowerSeedRadius;
+  args.upperSeed       = upperSeed;
+  args.upperSeedRadius = upperSeedRadius;
+
+  args.dMaxAirwayRadius             = dMaxAirwayRadius;
+  args.dErodeDistance               = dErodeDistance;
+  args.iMaximumNumberOfCVIterations = iMaximumNumberOfCVIterations;
+  args.dCVLambda                    = dCVLambda;
+  args.iComponent                   = iComponent;
+
+  for ( size_t i = 0; i < maxillarySinusesSeeds.size(); ++i ) {
+    args.maxillarySinusesSeeds.push_back( maxillarySinusesSeeds[i] );
+  }
+  args.maxillarySinusesSeedsRadius = maxillarySinusesSeedsRadius;
+  args.erosionPercentage           = erosionPercentage;
+  args.bRemoveMaxillarySinuses     = bRemoveMaxillarySinuses;
+
+  args.bNoWarning   = bNoWarning;
+  args.bDebug       = bDebug;
+  args.sDebugFolder = sDebugFolder;
+
+  args.bRAIImage     = bRAIImage;
+  args.sRAIImagePath = sRAIImagePath;
+  
   if (bDebug) outputAllSettings( argc, argv ); // Output the arguments
 
 	itk::ImageIOBase::IOPixelType     inputPixelType;
@@ -120,19 +149,19 @@ int main( int argc, char * argv[] )
 				std::cout<<"Unsigned short images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::SHORT:
-				ret = AirwaySegmenter::DoIt( argc, argv, static_cast<short>(0) );
+				ret = AirwaySegmenter::DoIt( args, static_cast<short>(0) );
 				break;
 			case itk::ImageIOBase::UINT:
 				std::cout<<"Unsigned int images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::INT:
-				ret = AirwaySegmenter::DoIt( argc, argv, static_cast<int>(0) );
+				ret = AirwaySegmenter::DoIt( args, static_cast<int>(0) );
 				break;
 			case itk::ImageIOBase::ULONG:
 				std::cout<<"Unsigned long images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::LONG:
-				ret = AirwaySegmenter::DoIt( argc, argv, static_cast<long>(0) );
+				ret = AirwaySegmenter::DoIt( args, static_cast<long>(0) );
 				break;
 			case itk::ImageIOBase::FLOAT:
 				std::cout<<"Float images not supported"<<std::endl;

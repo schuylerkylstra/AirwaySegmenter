@@ -31,6 +31,7 @@
 #include "itkAirwaySurfaceWriter.h"
 #include "itkMaskedOtsuThresholdImageFilter.h"
 
+#include "ProgramArguments.h"
 
 namespace AirwaySegmenter {
 
@@ -208,7 +209,7 @@ namespace AirwaySegmenter {
 		return finalLabel;
 	}
 	
-	template <class T> int DoIt(int argc, char* argv[], T)
+	template <class T> int DoIt( const ProgramArguments & args, T)
 	{
 		/* Typedefs */
 	
@@ -234,15 +235,13 @@ namespace AirwaySegmenter {
 		typedef typename LabelImageType::PointType TOrigin;
 		typedef typename LabelImageType::IndexType TIndex;
 	
-		/* Parsing the input */
-		
-		PARSE_ARGS; // Parse the input arguments
+    std::string sDebugFolder( args.sDebugFolder );
 	
-		if(bDebug && (sDebugFolder.compare("None") == 0 || sDebugFolder.compare("") == 0)) sDebugFolder = "."; //Outputing debug result to current folder if not precised otherwise
+		if(args.bDebug && (sDebugFolder.compare("None") == 0 || sDebugFolder.compare("") == 0)) sDebugFolder = "."; //Outputing debug result to current folder if not precised otherwise
 	
 		typename ReaderType::Pointer reader = ReaderType::New();
 		
-		reader->SetFileName( inputImage ); // rRead the input image
+		reader->SetFileName( args.inputImage ); // rRead the input image
 	
 		try
 		{
@@ -295,11 +294,11 @@ namespace AirwaySegmenter {
 	
 		/* Write RAI Image if asked to */
 		
-		if (bRAIImage)
+		if (args.bRAIImage)
 		{
 			typename WriterType::Pointer writer = WriterType::New();
 			writer->SetInput( originalImage);
-			writer->SetFileName( sRAIImagePath.c_str() );
+			writer->SetFileName( args.sRAIImagePath.c_str() );
 	
 			try
 			{
@@ -322,7 +321,7 @@ namespace AirwaySegmenter {
 		otsuThresholdFilter->SetInput( originalImage );
 		otsuThresholdFilter->Update();
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			
@@ -347,7 +346,7 @@ namespace AirwaySegmenter {
 		typename ThresholdingFilterType::Pointer thresholdDilation = ThresholdingFilterType::New();
 	
 		thresholdDilation->SetLowerThreshold( 0.0 );
-		thresholdDilation->SetUpperThreshold( dMaxAirwayRadius );
+		thresholdDilation->SetUpperThreshold( args.dMaxAirwayRadius );
 		thresholdDilation->SetOutsideValue( 0 );
 		thresholdDilation->SetInsideValue( 1 );
 	
@@ -395,7 +394,7 @@ namespace AirwaySegmenter {
 			++imageIterator;
 		}
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			std::cout<<std::endl<<std::endl;
 			std::cout<< "FastMarching Dilatation:	- Number of Alive Seeds: "<< aliveSeeds->Size() <<std::endl;
@@ -410,7 +409,7 @@ namespace AirwaySegmenter {
 		fastMarchingDilate->SetOutputRegion( otsuThresholdFilter->GetOutput()->GetBufferedRegion() );
 		fastMarchingDilate->SetOutputSpacing( otsuThresholdFilter->GetOutput()->GetSpacing() );
 		fastMarchingDilate->SetOutputOrigin( otsuThresholdFilter->GetOutput()->GetOrigin() );
-		fastMarchingDilate->SetStoppingValue( dErodeDistance + dMaxAirwayRadius+ 1 );
+		fastMarchingDilate->SetStoppingValue( args.dErodeDistance + args.dMaxAirwayRadius+ 1 );
 	
 		try
 		{
@@ -422,7 +421,7 @@ namespace AirwaySegmenter {
 			std::cerr << excep << std::endl;
 		}
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typedef itk::ImageFileWriter<FloatImageType> WriterFloatType;
 			typename WriterFloatType::Pointer writer = WriterFloatType::New();
@@ -446,7 +445,7 @@ namespace AirwaySegmenter {
 		thresholdDilation->SetInput( fastMarchingDilate->GetOutput() );
 		thresholdDilation->Update();
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			writer->SetInput( thresholdDilation->GetOutput() );
@@ -469,7 +468,7 @@ namespace AirwaySegmenter {
 		typename ThresholdingFilterType::Pointer thresholdClosing = ThresholdingFilterType::New();
 	
 		thresholdClosing->SetLowerThreshold( 0.0 ); 
-		thresholdClosing->SetUpperThreshold( dMaxAirwayRadius );
+		thresholdClosing->SetUpperThreshold( args.dMaxAirwayRadius );
 		thresholdClosing->SetOutsideValue( 1 ); 
 		thresholdClosing->SetInsideValue( 0 );
 	
@@ -493,14 +492,14 @@ namespace AirwaySegmenter {
 			{
 				node.SetIndex( binaryDilatedImageIterator.GetIndex() );
 	
-				if (floatDilatedImageIterator.Get() > dMaxAirwayRadius + dErodeDistance) aliveSeeds->InsertElement( uiNumberOfAliveSeeds++, node ); // Alive seed
+				if (floatDilatedImageIterator.Get() > args.dMaxAirwayRadius + args.dErodeDistance) aliveSeeds->InsertElement( uiNumberOfAliveSeeds++, node ); // Alive seed
 				else trialSeeds->InsertElement( uiNumberOfTrialSeeds++, node ); // Trial seed
 			}
 			
 			++floatDilatedImageIterator;
 		}
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			std::cout<<std::endl<<std::endl;
 			std::cout<<"FastMarching Close:		- Number of Alive Seeds: "<<aliveSeeds->Size()<<" "<<uiNumberOfAliveSeeds << std::endl;
@@ -518,7 +517,7 @@ namespace AirwaySegmenter {
 		fastMarchingClose->SetOutputSpacing( thresholdDilation->GetOutput()->GetSpacing() );
 		fastMarchingClose->SetOutputOrigin( thresholdDilation->GetOutput()->GetOrigin() );
 	
-		fastMarchingClose->SetStoppingValue( dErodeDistance + dMaxAirwayRadius+ 1 );
+		fastMarchingClose->SetStoppingValue( args.dErodeDistance + args.dMaxAirwayRadius+ 1 );
 	
 		try
 		{
@@ -530,7 +529,7 @@ namespace AirwaySegmenter {
 			std::cerr << excep << std::endl;
 		}
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typedef itk::ImageFileWriter<FloatImageType> WriterFloatType;
 			typename WriterFloatType::Pointer writer = WriterFloatType::New();
@@ -553,7 +552,7 @@ namespace AirwaySegmenter {
 		thresholdClosing->SetInput( fastMarchingClose->GetOutput() );
 		thresholdClosing->Update();
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			
@@ -582,7 +581,7 @@ namespace AirwaySegmenter {
 		absoluteValueDifferenceFilter->SetInput2( thresholdClosing->GetOutput() );
 		absoluteValueDifferenceFilter->Update();
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			writer->SetInput( absoluteValueDifferenceFilter->GetOutput() );
@@ -609,7 +608,7 @@ namespace AirwaySegmenter {
 		typename ThresholdingFilterType::Pointer thresholdDifference = ThresholdingFilterType::New();
 	
 		thresholdDifference->SetLowerThreshold( 0.0 ); // We can get this simply by taking a slightly different threshold for the marching in case
-		thresholdDifference->SetUpperThreshold( dMaxAirwayRadius+dErodeDistance );
+		thresholdDifference->SetUpperThreshold( args.dMaxAirwayRadius+args.dErodeDistance );
 		thresholdDifference->SetOutsideValue( 1 );
 		thresholdDifference->SetInsideValue( 0 );
 		
@@ -625,7 +624,7 @@ namespace AirwaySegmenter {
 	
 		/* Extract largest component of the difference */
 	
-		if (bDebug) std::cout << "Extracting largest connected component ... ";
+		if (args.bDebug) std::cout << "Extracting largest connected component ... ";
 	
 		typedef itk::ConnectedComponentImageFilter<LabelImageType, LabelImageType > ConnectedComponentType;
 		typedef itk::RelabelComponentImageFilter<LabelImageType, LabelImageType > RelabelComponentType;
@@ -643,15 +642,15 @@ namespace AirwaySegmenter {
 	
 		int componentNumber = 0;
 		
-		if (iComponent <= 0)
+		if (args.iComponent <= 0)
 		{
-			componentNumber = LabelIt<T>(relabel->GetOutput(), upperSeed, upperSeedRadius, bDebug);
-			if (componentNumber <= 0 ) componentNumber = LabelIt<T>(relabel->GetOutput(), lowerSeed, lowerSeedRadius, bDebug);
+			componentNumber = LabelIt<T>(relabel->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
+			if (componentNumber <= 0 ) componentNumber = LabelIt<T>(relabel->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
 			std::cout<<"Label found = "<<componentNumber<<std::endl;
 		}
 		else
 		{
-			componentNumber = iComponent;
+			componentNumber = args.iComponent;
 		}
 	
 		
@@ -662,7 +661,7 @@ namespace AirwaySegmenter {
 		largestComponentThreshold->SetOutsideValue(0);
 		largestComponentThreshold->Update(); // Pull out the largest object
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer lccWriter = WriterLabelType::New();
 			lccWriter->SetInput( largestComponentThreshold->GetOutput() );
@@ -689,17 +688,17 @@ namespace AirwaySegmenter {
 	
 		typename ThresholdingFilterType::Pointer thresholdExtendedSegmentation =ThresholdingFilterType::New();
 	
-		thresholdExtendedSegmentation->SetInput( FastMarchIt<T>(largestComponentThreshold->GetOutput(), "Out", dErodeDistance, dMaxAirwayRadius) ); // There are enough few seeds that they can all be considered as part of the trial seeds
+		thresholdExtendedSegmentation->SetInput( FastMarchIt<T>(largestComponentThreshold->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius) ); // There are enough few seeds that they can all be considered as part of the trial seeds
 		thresholdExtendedSegmentation->SetLowerThreshold( 0.0 );
 	
-		thresholdExtendedSegmentation->SetUpperThreshold( (sqrt(2.0)-1)*dMaxAirwayRadius ); // To make sure we get roughly twice the volume if the object would have a circular cross section
+		thresholdExtendedSegmentation->SetUpperThreshold( (sqrt(2.0)-1)*args.dMaxAirwayRadius ); // To make sure we get roughly twice the volume if the object would have a circular cross section
 	
 		thresholdExtendedSegmentation->SetOutsideValue( 0 ); 
 		thresholdExtendedSegmentation->SetInsideValue( 1 );
 		
 		thresholdExtendedSegmentation->Update(); // Force it so we have the mask available
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			writer->SetInput( thresholdExtendedSegmentation->GetOutput() );
@@ -734,7 +733,7 @@ namespace AirwaySegmenter {
 		T dThreshold = maskedOtsuThresholdFilter->GetThreshold(); // Get the threshold used in the otsu-thresholding
 		std::cout << "Threshold computed: " << dThreshold << std::endl;
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer labelWriterMaskedOtsu = WriterLabelType::New();
 			
@@ -756,14 +755,14 @@ namespace AirwaySegmenter {
 	
 		/* Now mask it again and extract the largest component */
 		
-		if (bDebug) std::cout << " mask it again and extract the largest component ... " << std::endl;
+		if (args.bDebug) std::cout << " mask it again and extract the largest component ... " << std::endl;
 	
 		typename TMaskImageFilter::Pointer maskedOtsu = TMaskImageFilter::New();
 	
 		maskedOtsu->SetInput1( maskedOtsuThresholdFilter->GetOutput() );
 		maskedOtsu->SetInput2( thresholdDifference->GetOutput() ); // Second input is the mask
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			writer->SetInput( maskedOtsu->GetOutput() );
@@ -797,7 +796,7 @@ namespace AirwaySegmenter {
 	
 		/* Extract largest the airway with the lungs */
 	
-		if (bDebug) std::cout << "Extracting final largest connected component ... ";
+		if (args.bDebug) std::cout << "Extracting final largest connected component ... ";
 	
 		typename ConnectedComponentType::Pointer connectedFinal = ConnectedComponentType::New();
 		typename RelabelComponentType::Pointer relabelFinal = RelabelComponentType::New();
@@ -808,15 +807,15 @@ namespace AirwaySegmenter {
 		relabelFinal->SetNumberOfObjectsToPrint( 5 );
 		relabelFinal->Update(); // Label the components in the image and relabel them so that object numbers increase as the size of the objects decrease
 	
-		if (iComponent <= 0)
+		if (args.iComponent <= 0)
 		{
-			componentNumber = LabelIt<T>(relabelFinal->GetOutput(), upperSeed, upperSeedRadius, bDebug);
-			if ( componentNumber <= 0 ) componentNumber = LabelIt<T>(relabelFinal->GetOutput(), lowerSeed, lowerSeedRadius, bDebug);
+			componentNumber = LabelIt<T>(relabelFinal->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
+			if ( componentNumber <= 0 ) componentNumber = LabelIt<T>(relabelFinal->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
 			//std::cout<<"Label found = "<<componentNumber<<std::endl;
 		}
 		else
 		{
-			componentNumber = iComponent;
+			componentNumber = args.iComponent;
 		}
 	
 		finalThreshold->SetInput( relabelFinal->GetOutput() );
@@ -826,7 +825,7 @@ namespace AirwaySegmenter {
 		finalThreshold->SetOutsideValue(0);
 		finalThreshold->Update(); // Pull out the largest object
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			writer->SetInput( finalThreshold->GetOutput() );
@@ -857,22 +856,22 @@ namespace AirwaySegmenter {
 	
 		float ballX, ballY, ballZ;
 		
-		ballX = -lowerSeed[0];
-		ballY = -lowerSeed[1];
-		ballZ = lowerSeed[2];
+		ballX = -args.lowerSeed[0];
+		ballY = -args.lowerSeed[1];
+		ballZ = args.lowerSeed[2];
 	
-		if (bDebug) std::cout << "(x, y, z): " << ballX  << " " << ballY  << " " << ballZ << ", Radius: " << lowerSeedRadius << std::endl;
+		if (args.bDebug) std::cout << "(x, y, z): " << ballX  << " " << ballY  << " " << ballZ << ", Radius: " << args.lowerSeedRadius << std::endl;
 	
 		/* Compute the cubic region around the ball */
 	
 		int ballRegion[6];
 		
-		ballRegion[0] = int(floor( ( ballX - lowerSeedRadius - imageOrigin[0] ) / imageSpacing[0] ));
-		ballRegion[1] = int(floor( ( ballY - lowerSeedRadius - imageOrigin[1] ) / imageSpacing[1] ));
-		ballRegion[2] = int(floor( ( ballZ - lowerSeedRadius - imageOrigin[2] ) / imageSpacing[2] ));
-		ballRegion[3] = int(ceil( ( ballX + lowerSeedRadius - imageOrigin[0] ) / imageSpacing[0] ));
-		ballRegion[4] = int(ceil( ( ballY + lowerSeedRadius - imageOrigin[1] ) / imageSpacing[1] ));
-		ballRegion[5] = int(ceil( ( ballZ + lowerSeedRadius - imageOrigin[2] ) / imageSpacing[2] ));
+		ballRegion[0] = int(floor( ( ballX - args.lowerSeedRadius - imageOrigin[0] ) / imageSpacing[0] ));
+		ballRegion[1] = int(floor( ( ballY - args.lowerSeedRadius - imageOrigin[1] ) / imageSpacing[1] ));
+		ballRegion[2] = int(floor( ( ballZ - args.lowerSeedRadius - imageOrigin[2] ) / imageSpacing[2] ));
+		ballRegion[3] = int(ceil( ( ballX + args.lowerSeedRadius - imageOrigin[0] ) / imageSpacing[0] ));
+		ballRegion[4] = int(ceil( ( ballY + args.lowerSeedRadius - imageOrigin[1] ) / imageSpacing[1] ));
+		ballRegion[5] = int(ceil( ( ballZ + args.lowerSeedRadius - imageOrigin[2] ) / imageSpacing[2] ));
 	
 		ballRegion[0] = ballRegion[0] > 0 ? ballRegion[0] : 0;
 		ballRegion[1] = ballRegion[1] > 0 ? ballRegion[1] : 0;
@@ -882,7 +881,7 @@ namespace AirwaySegmenter {
 		ballRegion[4] = ballRegion[4] < (imageSize[1]-1) ? ballRegion[4] : (imageSize[1]-1);
 		ballRegion[5] = ballRegion[5] < (imageSize[2]-1) ? ballRegion[5] : (imageSize[2]-1); 
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			std::cout << "Origin: "  << imageOrigin[0] << " " << imageOrigin[1] << " "  << imageOrigin[2] << std::endl;
 			std::cout << "Spacing: " << imageSpacing[0] << " " << imageSpacing[1] << " " << imageSpacing[2] << std::endl;
@@ -934,7 +933,7 @@ namespace AirwaySegmenter {
 					pixelIndexBranch[2] = iK - ballRegion[2];
 					imageBranch->SetPixel( pixelIndexBranch, 0 );
 	
-					if( iX * iX + iY * iY + iZ * iZ <= lowerSeedRadius * lowerSeedRadius ) // If within the radius of the ball
+					if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius ) // If within the radius of the ball
 					{
 						TIndex pixelIndex;
 						pixelIndex[0] = iI;
@@ -984,7 +983,7 @@ namespace AirwaySegmenter {
 		
 		if( nBranchParts > 1 )
 		{
-			if (bDebug) std::cout << "Number of parts in branch: " << nBranchParts << std::endl;
+			if (args.bDebug) std::cout << "Number of parts in branch: " << nBranchParts << std::endl;
 	
 			double minDist2Ball;
 			int minLabel;
@@ -1000,7 +999,7 @@ namespace AirwaySegmenter {
 				double zTmp = ( boundingBox[4] + boundingBox[5] ) / 2.0 - dBallIndexZ;
 				double distTmp = sqrt( xTmp * xTmp + yTmp * yTmp + zTmp * zTmp );
 	
-				if (bDebug) std::cout << "( " << xTmp << ", " << yTmp << ", " << zTmp << "), " << distTmp << std::endl;
+				if (args.bDebug) std::cout << "( " << xTmp << ", " << yTmp << ", " << zTmp << "), " << distTmp << std::endl;
 	
 				if( nNumParts == 1 || minDist2Ball > distTmp)
 				{
@@ -1008,7 +1007,7 @@ namespace AirwaySegmenter {
 					minLabel = nNumParts;
 				}
 	
-				if (bDebug) std::cout << boundingBox << std::endl;
+				if (args.bDebug) std::cout << boundingBox << std::endl;
 	
 			}
 			
@@ -1026,7 +1025,7 @@ namespace AirwaySegmenter {
 		branchThreshold->SetOutsideValue(0);
 		branchThreshold->Update();
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			
@@ -1054,7 +1053,7 @@ namespace AirwaySegmenter {
 		relabelFinalWithoutLung->SetNumberOfObjectsToPrint( 5 );
 		relabelFinalWithoutLung->Update();
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			
@@ -1078,7 +1077,7 @@ namespace AirwaySegmenter {
 	
 		/* Clean up the ball region: Second pass */
 	
-		if (bDebug) std::cout << "Get rid of residual lungs in the ball region ... " << std::endl;
+		if (args.bDebug) std::cout << "Get rid of residual lungs in the ball region ... " << std::endl;
 	
 		/* First get the original data in the lung+airway regions of the ball */
 		
@@ -1098,7 +1097,7 @@ namespace AirwaySegmenter {
 					pixelIndexBranch[2] = iK - ballRegion[2];
 					imageBranch->SetPixel( pixelIndexBranch, -1024 );
 	
-					if( iX * iX + iY * iY + iZ * iZ <= lowerSeedRadius * lowerSeedRadius )
+					if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius )
 					{
 						TIndex pixelIndex;
 						pixelIndex[0] = iI;
@@ -1119,7 +1118,7 @@ namespace AirwaySegmenter {
 		otsuThresholdBranchFilter->SetInput( imageBranch );
 		otsuThresholdBranchFilter->Update();
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			
@@ -1139,7 +1138,7 @@ namespace AirwaySegmenter {
 			}
 		}
 			
-		if (bDebug) std::cout << "Getting rid of the small lungs parts ... " << std::endl;
+		if (args.bDebug) std::cout << "Getting rid of the small lungs parts ... " << std::endl;
 	
 		for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ )
 		{
@@ -1157,13 +1156,13 @@ namespace AirwaySegmenter {
 					pixelIndexBranch[2] = iK - ballRegion[2];
 					imageBranch->SetPixel( pixelIndexBranch, 0 );
 	
-					if( iX * iX + iY * iY + iZ * iZ <= lowerSeedRadius * lowerSeedRadius )
+					if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius )
 						if( branchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) && otsuThresholdBranchFilter->GetOutput()->GetPixel( pixelIndexBranch ) ) imageBranch->SetPixel( pixelIndexBranch, 1 );
 				}
 			}
 		}
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			
@@ -1201,21 +1200,21 @@ namespace AirwaySegmenter {
 		cleanedBranchThreshold->SetOutsideValue( 0 );
 		cleanedBranchThreshold->Update();
 	
-		if (bDebug) std::cout << "Final airway label ... " << std::endl;
+		if (args.bDebug) std::cout << "Final airway label ... " << std::endl;
 	
 		/* Find the airway label using the pyryna apreture position */
 	
 		int nNumAirway = 0;
 		
-		if (iComponent <= 0)
+		if (args.iComponent <= 0)
 		{
-			nNumAirway = LabelIt<T>(relabelFinalWithoutLung->GetOutput(), upperSeed, upperSeedRadius, bDebug);
-			if (nNumAirway <= 0 ) nNumAirway = LabelIt<T>(relabelFinalWithoutLung->GetOutput(), lowerSeed, lowerSeedRadius, bDebug);
+			nNumAirway = LabelIt<T>(relabelFinalWithoutLung->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
+			if (nNumAirway <= 0 ) nNumAirway = LabelIt<T>(relabelFinalWithoutLung->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
 			std::cout<<"Label found = "<<nNumAirway<<std::endl;
 		}
 		else
 		{
-			nNumAirway = iComponent;
+			nNumAirway = args.iComponent;
 		}
 	
 		/* Check if the maximum label found is 0, 
@@ -1230,10 +1229,10 @@ namespace AirwaySegmenter {
 			std::cerr<<"This probably means that nasal cavity is not segmented (or the point is misplaced)."<<std::endl;
 			std::cerr<<" Advice: use --debug to ouput and check all the labels found and/or increase the upperSeedRadius to cover more space"<<std::endl;
 			
-			if (bNoWarning) return EXIT_FAILURE;
+			if (args.bNoWarning) return EXIT_FAILURE;
 		}
 	
-		if (bDebug) std::cout << "The label " << nNumAirway << " is picked as the airway." << std::endl;
+		if (args.bDebug) std::cout << "The label " << nNumAirway << " is picked as the airway." << std::endl;
 	
 		typename FinalThresholdingFilterType::Pointer finalAirwayThreshold = FinalThresholdingFilterType::New();
 		
@@ -1244,7 +1243,7 @@ namespace AirwaySegmenter {
 		finalAirwayThreshold->SetOutsideValue(0); 
 		finalAirwayThreshold->Update();
 	
-		if (bDebug)
+		if (args.bDebug)
 		{
 			typename WriterLabelType::Pointer writer = WriterLabelType::New();
 			
@@ -1266,7 +1265,7 @@ namespace AirwaySegmenter {
 	
 		/* Finaly paste the ball back */
 	
-		if (bDebug) std::cout << "Putting the branches back ... " << std::endl;
+		if (args.bDebug) std::cout << "Putting the branches back ... " << std::endl;
 	
 		for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ )
 		{
@@ -1278,7 +1277,7 @@ namespace AirwaySegmenter {
 					double iY = iJ * imageSpacing[1] + imageOrigin[1] - ballY;
 					double iZ = iK * imageSpacing[2] + imageOrigin[2] - ballZ;
 	
-					if( iX * iX + iY * iY + iZ * iZ <= lowerSeedRadius * lowerSeedRadius )
+					if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius )
 					{
 						TIndex pixelIndex;
 						
@@ -1303,9 +1302,9 @@ namespace AirwaySegmenter {
 	
 		/* Optionnaly remove the maxillary sinus(es) */
 	
-		if (bRemoveMaxillarySinuses)
+		if (args.bRemoveMaxillarySinuses)
 		{
-			std::cout << "maxillarySinusesSeeds "<<maxillarySinusesSeeds.size() << std::endl;
+			std::cout << "maxillarySinusesSeeds "<<args.maxillarySinusesSeeds.size() << std::endl;
 			
 			/* First thing, Erode to severe the small connection
 			 * between the sinuses and the airway
@@ -1315,15 +1314,15 @@ namespace AirwaySegmenter {
 	
 			typename ThresholdingFilterType::Pointer thresholdSlightErosion = ThresholdingFilterType::New();
 			
-			thresholdSlightErosion->SetLowerThreshold( dMaxAirwayRadius*erosionPercentage ); //Should be set ?
-			thresholdSlightErosion->SetUpperThreshold( dMaxAirwayRadius );
+			thresholdSlightErosion->SetLowerThreshold( args.dMaxAirwayRadius*args.erosionPercentage ); //Should be set ?
+			thresholdSlightErosion->SetUpperThreshold( args.dMaxAirwayRadius );
 			thresholdSlightErosion->SetOutsideValue( 0 );
 			thresholdSlightErosion->SetInsideValue( 1 );
 	
-			thresholdSlightErosion->SetInput( FastMarchIt<T>( FinalSegmentation, "In", dErodeDistance, dMaxAirwayRadius));
+			thresholdSlightErosion->SetInput( FastMarchIt<T>( FinalSegmentation, "In", args.dErodeDistance, args.dMaxAirwayRadius));
 			thresholdSlightErosion->Update();
 	
-			if (bDebug)
+			if (args.bDebug)
 			{
 				typename WriterLabelType::Pointer writer = WriterLabelType::New();
 				
@@ -1369,20 +1368,20 @@ namespace AirwaySegmenter {
 			
 			sinusesImage->FillBuffer(0);
 	
-			int airwayLabel = LabelIt<T>(relabelSinuses->GetOutput(), upperSeed, upperSeedRadius, bDebug); //Get the airway label
+			int airwayLabel = LabelIt<T>(relabelSinuses->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug); //Get the airway label
 	
-			for (int i = 0; i < maxillarySinusesSeeds.size(); ++i) //For each seed
+			for (int i = 0; i < args.maxillarySinusesSeeds.size(); ++i) //For each seed
 			{
-				int seedLabel = LabelIt<T>(relabelSinuses->GetOutput(), maxillarySinusesSeeds[i], maxillarySinusesSeedsRadius, bDebug); //Get the label of the maxillary sinus
+				int seedLabel = LabelIt<T>(relabelSinuses->GetOutput(), args.maxillarySinusesSeeds[i], args.maxillarySinusesSeedsRadius, args.bDebug); //Get the label of the maxillary sinus
 				//std::cout<<"Seed Label: "<<seedLabel<<std::endl;
 	
 				if (airwayLabel == seedLabel) //The airway label MUST be different thant the seed label, Otherwise the airway would be maked out
 				{
 					std::cerr <<"WARNING !"<<std::endl;
-					std::cerr << "The airway label found is equal to the label found with seed #" << i << " (seed =" << maxillarySinusesSeeds[i][0] << ", " << maxillarySinusesSeeds[i][1]  << ", " << maxillarySinusesSeeds[i][2] << ")" << std::endl;
+					std::cerr << "The airway label found is equal to the label found with seed #" << i << " (seed =" << args.maxillarySinusesSeeds[i][0] << ", " << args.maxillarySinusesSeeds[i][1]  << ", " << args.maxillarySinusesSeeds[i][2] << ")" << std::endl;
 					std::cerr << "Review the seed position and/or the percentage used." << std::endl;
 					
-					if (bNoWarning) return EXIT_FAILURE; else continue;
+					if (args.bNoWarning) return EXIT_FAILURE; else continue;
 				}
 	
 				typename LabelThresholdFilterType::Pointer thresholdOut = LabelThresholdFilterType::New();
@@ -1401,7 +1400,7 @@ namespace AirwaySegmenter {
 				sinusesImage = addFilter->GetOutput();
 			}
 	
-			if (bDebug)
+			if (args.bDebug)
 			{
 				typename WriterLabelType::Pointer writer = WriterLabelType::New();
 				
@@ -1430,13 +1429,13 @@ namespace AirwaySegmenter {
 			typename ThresholdingFilterType::Pointer thresholdSlighDilatation = ThresholdingFilterType::New();
 			
 			thresholdSlighDilatation->SetLowerThreshold( 0 );
-			thresholdSlighDilatation->SetUpperThreshold( dMaxAirwayRadius*erosionPercentage ); //Should be set ?
+			thresholdSlighDilatation->SetUpperThreshold( args.dMaxAirwayRadius*args.erosionPercentage ); //Should be set ?
 			thresholdSlighDilatation->SetOutsideValue( 1 );
 			thresholdSlighDilatation->SetInsideValue( 0 );
-			thresholdSlighDilatation->SetInput( FastMarchIt<T>( addFilter->GetOutput(), "Out", dErodeDistance, dMaxAirwayRadius));
+			thresholdSlighDilatation->SetInput( FastMarchIt<T>( addFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius));
 			thresholdSlighDilatation->Update();
 	
-			if (bDebug)
+			if (args.bDebug)
 			{
 				typename WriterLabelType::Pointer writer = WriterLabelType::New();
 				
@@ -1464,7 +1463,7 @@ namespace AirwaySegmenter {
 			substractSinusesMask->SetInput( FinalSegmentation );
 			substractSinusesMask->Update();
 	
-			if (bDebug)
+			if (args.bDebug)
 			{
 				typename WriterLabelType::Pointer writer = WriterLabelType::New();
 				
@@ -1494,7 +1493,7 @@ namespace AirwaySegmenter {
 			relabelCleanUp->SetNumberOfObjectsToPrint( 5 );
 			relabelCleanUp->Update();
 	
-			nNumAirway = LabelIt<T>(relabelCleanUp->GetOutput(), upperSeed, upperSeedRadius, bDebug);
+			nNumAirway = LabelIt<T>(relabelCleanUp->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
 	
 			typename FinalThresholdingFilterType::Pointer thresholdCleanUp = FinalThresholdingFilterType::New();
 			
@@ -1508,13 +1507,13 @@ namespace AirwaySegmenter {
 			FinalSegmentation = thresholdCleanUp->GetOutput();
 		}
 	
-		if (bDebug) std::cout << "Writing the final image ... " << std::endl;
+		if (args.bDebug) std::cout << "Writing the final image ... " << std::endl;
 	
 		/* Write final image */
 		
 		typename WriterLabelType::Pointer lccWriterFinal = WriterLabelType::New();
 		lccWriterFinal->SetInput( FinalSegmentation );
-		lccWriterFinal->SetFileName( outputImage.c_str() );
+		lccWriterFinal->SetFileName( args.outputImage.c_str() );
 	
 		try
 		{
@@ -1530,7 +1529,7 @@ namespace AirwaySegmenter {
 	
 		typename itk::AirwaySurfaceWriter<InputImageType, LabelImageType>::Pointer surfaceWriter= itk::AirwaySurfaceWriter<InputImageType, LabelImageType>::New();
 		
-		surfaceWriter->SetFileName( outputGeometry.c_str() );
+		surfaceWriter->SetFileName( args.outputGeometry.c_str() );
 		surfaceWriter->SetUseFastMarching(true);
 		surfaceWriter->SetMaskImage( FinalSegmentation );
 		surfaceWriter->SetInput( originalImage );
@@ -1546,7 +1545,7 @@ namespace AirwaySegmenter {
 			std::cerr << excep << std::endl;
 		}
 	
-		if (bDebug) std::cout << "done." << std::endl;
+		if (args.bDebug) std::cout << "done." << std::endl;
 	
 		return EXIT_SUCCESS;
 	}
