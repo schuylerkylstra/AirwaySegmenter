@@ -149,19 +149,19 @@ int main( int argc, char * argv[] )
 				std::cout<<"Unsigned short images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::SHORT:
-				ret = AirwaySegmenter::DoIt( args, static_cast<short>(0) );
+				ret = AirwaySegmenter::ExecuteFromFile( args, static_cast<short>(0) );
 				break;
 			case itk::ImageIOBase::UINT:
 				std::cout<<"Unsigned int images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::INT:
-				ret = AirwaySegmenter::DoIt( args, static_cast<int>(0) );
+				ret = AirwaySegmenter::ExecuteFromFile( args, static_cast<int>(0) );
 				break;
 			case itk::ImageIOBase::ULONG:
 				std::cout<<"Unsigned long images not supported"<<std::endl;
 				break;
 			case itk::ImageIOBase::LONG:
-				ret = AirwaySegmenter::DoIt( args, static_cast<long>(0) );
+				ret = AirwaySegmenter::ExecuteFromFile( args, static_cast<long>(0) );
 				break;
 			case itk::ImageIOBase::FLOAT:
 				std::cout<<"Float images not supported"<<std::endl;

@@ -35,13 +35,17 @@
 
 namespace AirwaySegmenter {
 
-	/* This Fast marching is factorised for preventing the memory to
-	 * be overwhelmed by unused nodes. Now that
-	 * this function is for internal use, it assumes all
-	 * its parameters are given correctly
+  /*******************************************************************/
+	/* This Fast marching is factorised for preventing the memory to be
+	 * overwhelmed by unused nodes. Now that this function is for
+	 * internal use, it assumes all its parameters are given correctly.
 	 */
-
-	template <class T> itk::Image<float, 3>::Pointer FastMarchIt(typename itk::Image<T, 3>::Pointer image,std::string type, double erodedDistance, double airwayRadius)
+  /*******************************************************************/
+	template <class T>
+  itk::Image<float, 3>::Pointer FastMarchIt( typename itk::Image<T, 3>::Pointer image,
+                                             std::string type,
+                                             double erodedDistance,
+                                             double airwayRadius )
 	{
 		/* Necessaries typedefs */
 
@@ -115,11 +119,16 @@ namespace AirwaySegmenter {
 		return fastMarching->GetOutput();
 	}
 
-	/* Look for the labels in the sphercal region within radius of
-	 * the ball center and return the most represented label
+  /*******************************************************************/
+	/* Look for the labels in the sphercal region within radius of the
+	 * ball center and return the most represented label.
 	 */
-
-	template <class T> int LabelIt(typename itk::Image<T, 3>::Pointer image, std::vector<float> ballCenter, double radius, bool printLabels)
+  /*******************************************************************/
+	template <class T>
+  int LabelIt( typename itk::Image<T, 3>::Pointer image,
+               std::vector<float> ballCenter,
+               double radius,
+               bool printLabels )
 	{
 		typedef itk::Image<T, 3> TImage;
 		typedef typename itk::Image<T, 3>::SizeType TSize;
@@ -209,8 +218,13 @@ namespace AirwaySegmenter {
 		return finalLabel;
 	}
 
+  /*******************************************************************/
+  /** Run the algorithm on an input image and write it to the output
+      image. */
+  /*******************************************************************/
   template< class TInput, class TOutput >
-  int Execute( const ProgramArguments & args, TInput * originalImage,
+  int Execute( const ProgramArguments & args,
+               TInput * originalImage,
                TOutput & output )
   {
 		/* Typedefs */
@@ -1538,7 +1552,11 @@ namespace AirwaySegmenter {
 		return EXIT_SUCCESS;
 	}
 
-	template <class T> int DoIt( const ProgramArguments & args, T)
+  /*******************************************************************/
+  /** Execute the algorithm on an image read from a file. */
+  /*******************************************************************/
+	template <class T>
+  int ExecuteFromFile( const ProgramArguments & args, T)
 	{
 		/* Typedefs */
 		typedef float TFloatType;
