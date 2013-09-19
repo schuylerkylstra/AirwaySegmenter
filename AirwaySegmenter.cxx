@@ -39,7 +39,10 @@
 
 namespace
 {
-	int outputAllSettings(int argc, char* argv[])
+  /*******************************************************************/
+  /** Print all the settings. */
+  /*******************************************************************/
+	int OutputAllSettings(int argc, char* argv[])
 	{
 		PARSE_ARGS;
 	
@@ -57,8 +60,6 @@ namespace
 		std::cout << "----------------------------------------------------------------------------------" << std::endl;
 		std::cout << "dMaxAirwayRadius             = " << dMaxAirwayRadius << std::endl;
 		std::cout << "dErodeDistance               = " << dErodeDistance << std::endl;
-		std::cout << "iMaximumNumberOfCVIterations = " << iMaximumNumberOfCVIterations << std::endl;
-		std::cout << "dCVLambda                    = " << dCVLambda << std::endl;
 		std::cout << "iComponent                   = " << iComponent << std::endl;
 		std::cout << "----------------------------------------------------------------------------------" << std::endl;
 		for (int i = 0; i < maxillarySinusesSeeds.size(); ++i) std::cout << "maxillarySinusesSeeds      = " << maxillarySinusesSeeds[i][0] << ", " << maxillarySinusesSeeds[i][1] << ", " << maxillarySinusesSeeds[i][2] << std::endl;
@@ -76,7 +77,10 @@ namespace
 	
 		return 0;
 	}
-	
+
+  /*******************************************************************/
+  /** Query the image type. */
+  /*******************************************************************/
 	void GetImageType (std::string fileName,itk::ImageIOBase::IOPixelType &pixelType,itk::ImageIOBase::IOComponentType &componentType)
 	{
 		typedef itk::Image<unsigned char, 3> ImageType;
@@ -91,6 +95,7 @@ namespace
 
 } // End namespace
 
+/*******************************************************************/
 int main( int argc, char * argv[] )
 {
 
@@ -108,8 +113,6 @@ int main( int argc, char * argv[] )
 
   args.dMaxAirwayRadius             = dMaxAirwayRadius;
   args.dErodeDistance               = dErodeDistance;
-  args.iMaximumNumberOfCVIterations = iMaximumNumberOfCVIterations;
-  args.dCVLambda                    = dCVLambda;
   args.iComponent                   = iComponent;
 
   for ( size_t i = 0; i < maxillarySinusesSeeds.size(); ++i ) {
@@ -126,7 +129,7 @@ int main( int argc, char * argv[] )
   args.bRAIImage     = bRAIImage;
   args.sRAIImagePath = sRAIImagePath;
   
-  if (bDebug) outputAllSettings( argc, argv ); // Output the arguments
+  if (bDebug) OutputAllSettings( argc, argv ); // Output the arguments
 
 	itk::ImageIOBase::IOPixelType     inputPixelType;
 	itk::ImageIOBase::IOComponentType inputComponentType;

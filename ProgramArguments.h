@@ -34,8 +34,6 @@ public:
 
   double dMaxAirwayRadius;
   double dErodeDistance;
-  int    iMaximumNumberOfCVIterations;
-  double dCVLambda;
   int    iComponent;
 
   std::vector< std::vector< float > > maxillarySinusesSeeds;
