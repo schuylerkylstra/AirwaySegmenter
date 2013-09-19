@@ -139,7 +139,7 @@ namespace AirwaySegmenter {
 		y = -ballCenter[1];
 		z =  ballCenter[2];
 
-		/* Get the bounding box around the pyriform aperture */
+		/* Get the bounding box around the sphere. */
 
 		int region[6];
 
