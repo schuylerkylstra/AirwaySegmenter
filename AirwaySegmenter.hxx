@@ -139,7 +139,7 @@ namespace AirwaySegmenter {
 		y = -ballCenter[1];
 		z =  ballCenter[2];
 	
-		/* Get the bounding box around the piryna aperture */
+		/* Get the bounding box around the pyriform aperture */
 		
 		int region[6];
 		
@@ -209,11 +209,13 @@ namespace AirwaySegmenter {
 		return finalLabel;
 	}
 	
-	template <class T> int DoIt( const ProgramArguments & args, T)
-	{
+  template< class TInput, class TOutput >
+  int Execute( const ProgramArguments & args, TInput * originalImage,
+               TOutput & output )
+  {
 		/* Typedefs */
-	
 		typedef float TFloatType;
+    typedef typename TInput::PixelType T;
 		typedef T TPixelType;
 		typedef T TLabelPixelType;
 	
@@ -238,24 +240,9 @@ namespace AirwaySegmenter {
     std::string sDebugFolder( args.sDebugFolder );
 	
 		if(args.bDebug && (sDebugFolder.compare("None") == 0 || sDebugFolder.compare("") == 0)) sDebugFolder = "."; //Outputing debug result to current folder if not precised otherwise
-	
-		typename ReaderType::Pointer reader = ReaderType::New();
 		
-		reader->SetFileName( args.inputImage ); // rRead the input image
-	
-		try
-		{
-			reader->Update();  
-		}
-		catch ( itk::ExceptionObject & excep )
-		{
-			std::cerr << "Exception caught !" << std::endl;
-			std::cerr << excep << std::endl;
-		}
-	
 		/*  Automatic Resampling to RAI */
 		
-		typename InputImageType::Pointer originalImage = reader->GetOutput();
 		typename InputImageType::DirectionType originalImageDirection = originalImage->GetDirection();
 	
 		itk::SpatialOrientationAdapter adapter;
@@ -1202,7 +1189,7 @@ namespace AirwaySegmenter {
 	
 		if (args.bDebug) std::cout << "Final airway label ... " << std::endl;
 	
-		/* Find the airway label using the pyryna apreture position */
+		/* Find the airway label using the pyriform aperture */
 	
 		int nNumAirway = 0;
 		
@@ -1225,7 +1212,7 @@ namespace AirwaySegmenter {
 		if (nNumAirway == 0) 
 		{
 			std::cerr<<"WARNING !"<<std::endl;
-			std::cerr<<"The maximum label found in the spherical region around the pyrina aperture was zero !"<<std::endl;
+			std::cerr<<"The maximum label found in the spherical region around the pyriform aperture was zero !"<<std::endl;
 			std::cerr<<"This probably means that nasal cavity is not segmented (or the point is misplaced)."<<std::endl;
 			std::cerr<<" Advice: use --debug to ouput and check all the labels found and/or increase the upperSeedRadius to cover more space"<<std::endl;
 			
@@ -1509,11 +1496,12 @@ namespace AirwaySegmenter {
 	
 		if (args.bDebug) std::cout << "Writing the final image ... " << std::endl;
 	
-		/* Write final image */
-		
+		/* Write final image */		
 		typename WriterLabelType::Pointer lccWriterFinal = WriterLabelType::New();
 		lccWriterFinal->SetInput( FinalSegmentation );
 		lccWriterFinal->SetFileName( args.outputImage.c_str() );
+
+    output = FinalSegmentation;
 	
 		try
 		{
@@ -1549,6 +1537,66 @@ namespace AirwaySegmenter {
 	
 		return EXIT_SUCCESS;
 	}
+
+	template <class T> int DoIt( const ProgramArguments & args, T)
+	{
+		/* Typedefs */
+		typedef float TFloatType;
+		typedef T TPixelType;
+		typedef T TLabelPixelType;
+	
+		const unsigned char DIMENSION = 3;
+	
+		typedef itk::Image<TPixelType, DIMENSION> InputImageType;
+		typedef itk::Image<TPixelType, DIMENSION> OutputImageType;
+		typedef itk::Image<TLabelPixelType, DIMENSION> LabelImageType;
+		typedef itk::Image<TFloatType, DIMENSION> FloatImageType;
+		typedef itk::Image<unsigned char, DIMENSION> UCharImageType;
+	
+		typedef itk::ImageFileReader<InputImageType> ReaderType;
+		typedef itk::ImageFileReader<LabelImageType> ReaderLabelType;
+		typedef itk::ImageFileWriter<OutputImageType> WriterType;
+		typedef itk::ImageFileWriter<LabelImageType> WriterLabelType;
+
+    // Read the input file  
+		typename ReaderType::Pointer reader = ReaderType::New();
+		reader->SetFileName( args.inputImage ); // rRead the input image
+	
+		try
+		{
+			reader->Update();  
+		}
+		catch ( itk::ExceptionObject & excep )
+		{
+			std::cerr << "Exception caught !" << std::endl;
+			std::cerr << excep << std::endl;
+		}
+  
+    // Run the algorithm
+    typename OutputImageType::Pointer algorithmOutput;
+    int result = Execute( args, reader->GetOutput(), algorithmOutput );
+    if ( result != EXIT_SUCCESS ) {
+      return result;
+    }
+
+    // Write the result.
+		typename WriterLabelType::Pointer writer = WriterLabelType::New();
+		writer->SetInput( algorithmOutput );
+		writer->SetFileName( args.outputImage.c_str() );
+	
+		try
+		{
+			writer->Update();
+		}
+		catch( itk::ExceptionObject & excep )
+		{
+			std::cerr << "Exception caught !" << std::endl;
+			std::cerr << excep << std::endl;
+      return EXIT_FAILURE;
+		}
+
+    return EXIT_SUCCESS;
+  }
 
 } // end namespace AirwaySegmenter
 
