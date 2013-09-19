@@ -102,22 +102,6 @@
         </double>
 
         <integer>
-            <name>iMaximumNumberOfCVIterations</name>
-            <longflag>--maxNumberOfCVIterations</longflag>
-            <label>Maximum number of Chan Vese iterations.</label>
-            <default>-1</default>
-            <description><![CDATA[Maximum number of Chan Vese iterations (to smooth the final Otsu-thresholding result). If set to a negative value won't be used.]]></description>
-        </integer>
-
-        <double>
-            <name>dCVLambda</name>
-            <longflag>--lambda</longflag>
-            <label>Smoothing parameter for Chan Vese segmentation.</label>
-            <default>0.1</default>
-            <description><![CDATA[Smoothing parameter for Chan Vese segmentation. The larger the smoother.]]></description>
-        </double>
-
-        <integer>
             <name>iComponent</name>
             <longflag>--component</longflag>
             <label>Airway manual label</label>
