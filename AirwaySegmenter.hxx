@@ -225,7 +225,8 @@ namespace AirwaySegmenter {
   template< class TInput, class TOutput >
   int Execute( const ProgramArguments & args,
                TInput * originalImage,
-               TOutput & output )
+               TOutput & output,
+               typename TInput::PixelType & airwayThreshold )
   {
 		/* Typedefs */
 		typedef float TFloatType;
@@ -784,6 +785,8 @@ namespace AirwaySegmenter {
 
 		T dThreshold = maskedOtsuThresholdFilter->GetThreshold(); // Get the threshold used in the otsu-thresholding
 		std::cout << "Threshold computed: " << dThreshold << std::endl;
+
+    airwayThreshold = dThreshold;
 
 		if (args.bDebug)
 		{
@@ -1667,28 +1670,6 @@ namespace AirwaySegmenter {
 
     output = FinalSegmentation;
 
-		/* Write Surface */
-    if ( args.outputGeometry != "" ) {
-      typename itk::AirwaySurfaceWriter<InputImageType, LabelImageType>::Pointer surfaceWriter =
-        itk::AirwaySurfaceWriter<InputImageType, LabelImageType>::New();
-
-      surfaceWriter->SetFileName( args.outputGeometry.c_str() );
-      surfaceWriter->SetUseFastMarching(true);
-      surfaceWriter->SetMaskImage( FinalSegmentation );
-      surfaceWriter->SetInput( originalImage );
-      surfaceWriter->SetThreshold( dThreshold );
-
-      try
-        {
-          surfaceWriter->Update();
-        }
-      catch( itk::ExceptionObject & excep )
-        {
-          std::cerr << "Exception caught !" << std::endl;
-          std::cerr << excep << std::endl;
-        }
-    }
-
     if (args.bDebug) std::cout << "done." << std::endl;
 
 		return EXIT_SUCCESS;
@@ -1734,7 +1715,9 @@ namespace AirwaySegmenter {
 
     // Run the algorithm
     typename OutputImageType::Pointer algorithmOutput;
-    int result = Execute( args, reader->GetOutput(), algorithmOutput );
+    typename InputImageType::PixelType airwayThreshold;
+    int result = Execute( args, reader->GetOutput(),
+                          algorithmOutput, airwayThreshold );
     if ( result != EXIT_SUCCESS ) {
       return result;
     }
@@ -1754,6 +1737,30 @@ namespace AirwaySegmenter {
 			std::cerr << excep << std::endl;
       return EXIT_FAILURE;
 		}
+
+		/* Write Surface */
+    if ( args.outputGeometry != "" ) {
+      typedef itk::AirwaySurfaceWriter<InputImageType, LabelImageType>
+        SurfaceWriterType;
+      typename SurfaceWriterType::Pointer surfaceWriter =
+        SurfaceWriterType::New();
+
+      surfaceWriter->SetFileName( args.outputGeometry.c_str() );
+      surfaceWriter->SetUseFastMarching( true );
+      surfaceWriter->SetMaskImage( algorithmOutput );
+      surfaceWriter->SetInput( reader->GetOutput() );
+      surfaceWriter->SetThreshold( airwayThreshold );
+
+      try
+        {
+          surfaceWriter->Update();
+        }
+      catch( itk::ExceptionObject & excep )
+        {
+          std::cerr << "Exception caught !" << std::endl;
+          std::cerr << excep << std::endl;
+        }
+    }
 
     return EXIT_SUCCESS;
   }
