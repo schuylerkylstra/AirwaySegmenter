@@ -15,14 +15,6 @@ IF (ITK_VERSION_MAJOR VERSION_LESS "4")
   FATAL_ERROR("ITK version must be at least 4.0 ")
 ENDIF()
 
-#Testing
-OPTION(BUILD_TESTING "Build tests." ON)
-
-IF(BUILD_TESTING)
-  INCLUDE(CTest)
-  SET(TEMP "${CMAKE_BINARY_DIR}/Temp")
-ENDIF()
-
 #Compatibility between slicer and the executable
 SET(SLICER_ITK_DIFFERENT true CACHE BOOL "Check if compiling with a different ITK than slicer")
 CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/CMake/AirwaySegmenterConfig.h.in
@@ -37,3 +29,10 @@ SEMMacroBuildCLI(
   EXECUTABLE_ONLY
   )
   
+#Testing
+OPTION(BUILD_TESTING "Build tests." ON)
+
+IF(BUILD_TESTING)
+  enable_testing()
+  add_subdirectory(Testing)
+ENDIF()
