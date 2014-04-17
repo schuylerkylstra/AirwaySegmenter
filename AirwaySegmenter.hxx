@@ -116,15 +116,15 @@ namespace AirwaySegmenter {
   {
     /* Necessaries typedefs */
 
-    typedef itk::Image<float, 3> FloatImageType;
-    typedef itk::Image<T, 3> LabelImageType;
-    typedef itk::FastMarchingImageFilter<FloatImageType, FloatImageType> FastMarchingFilterType;
+    typedef itk::Image< float, 3 >                         FloatImageType;
+    typedef itk::Image< T, 3 >                             LabelImageType;
+    typedef itk::FastMarchingImageFilter< FloatImageType,
+                                          FloatImageType > FastMarchingFilterType;
     typedef typename FastMarchingFilterType::NodeContainer NodeContainer;
-    typedef typename FastMarchingFilterType::NodeType NodeType;
-    typedef itk::ImageRegionConstIterator<LabelImageType> ConstIteratorType;
+    typedef typename FastMarchingFilterType::NodeType      NodeType;
+    typedef itk::ImageRegionConstIterator<LabelImageType>  ConstIteratorType;
 
     /* Instantiations */
-
     typename FastMarchingFilterType::Pointer fastMarching = FastMarchingFilterType::New();
     typename NodeContainer::Pointer seeds = NodeContainer::New();
 
@@ -135,20 +135,15 @@ namespace AirwaySegmenter {
 
     unsigned int uiNumberOfSeeds = 0;
 
-    for ( it.GoToBegin(); !it.IsAtEnd(); ++it )
-    {
-      if (type.compare("Out") == 0) // Dilation
-      {
-        if ( it.Get() > 0 )
-        {
+    for ( it.GoToBegin(); !it.IsAtEnd(); ++it ) {
+      if (type.compare("Out") == 0) { // Dilation
+        if ( it.Get() > 0 ) {
           node.SetIndex( it.GetIndex() );
           seeds->InsertElement( uiNumberOfSeeds++, node );
         }
       }
-      else if (type.compare("In") == 0)// Erosion
-      {
-        if ( it.Get() == 0 )
-        {
+      else if (type.compare("In") == 0) { // Erosion
+        if ( it.Get() == 0 ) {
           node.SetIndex( it.GetIndex() );
           seeds->InsertElement( uiNumberOfSeeds++, node );
         }
@@ -162,15 +157,12 @@ namespace AirwaySegmenter {
      * the size of the image to be produced as output
      * This is done using the SetOutputSize()
      */
-
     fastMarching->SetInput( NULL );
     fastMarching->SetSpeedConstant( 1.0 );  // To solve a simple Eikonal equation
-
     fastMarching->SetOutputSize( image->GetBufferedRegion().GetSize() );
     fastMarching->SetOutputRegion( image->GetBufferedRegion() );
     fastMarching->SetOutputSpacing( image->GetSpacing() );
     fastMarching->SetOutputOrigin( image->GetOrigin() );
-
     fastMarching->SetStoppingValue( airwayRadius + erodedDistance + 1 );
 
     TRY_UPDATE( fastMarching );
@@ -189,18 +181,17 @@ namespace AirwaySegmenter {
                double radius,
                bool printLabels )
   {
-    typedef itk::Image<T, 3> TImage;
-    typedef typename itk::Image<T, 3>::SizeType TSize;
-    typedef typename itk::Image<T, 3>::SpacingType TSpacing;
-    typedef typename itk::Image<T, 3>::PointType TOrigin;
-    typedef typename itk::Image<T, 3>::IndexType TIndex;
+    typedef itk::Image< T, 3 >                       TImage;
+    typedef typename itk::Image< T, 3 >::SizeType    TSize;
+    typedef typename itk::Image< T, 3 >::SpacingType TSpacing;
+    typedef typename itk::Image< T, 3 >::PointType   TOrigin;
+    typedef typename itk::Image< T, 3 >::IndexType   TIndex;
 
     TOrigin imageOrigin = image->GetOrigin();
     TSpacing imageSpacing = image->GetSpacing();
     TSize imageSize = image->GetBufferedRegion().GetSize();
 
     /* Convert to LPS system */
-
     float x, y, z;
 
     x = -ballCenter[0];
@@ -208,7 +199,6 @@ namespace AirwaySegmenter {
     z =  ballCenter[2];
 
     /* Get the bounding box around the sphere. */
-
     int region[6];
 
     region[0] = int( floor( ( x - radius - imageOrigin[0] ) / imageSpacing[0] ) );
@@ -226,35 +216,34 @@ namespace AirwaySegmenter {
     region[4] = region[4] < (imageSize[1]-1) ? region[4] : (imageSize[1]-1);
     region[5] = region[5] < (imageSize[2]-1) ? region[5] : (imageSize[2]-1);
 
-    if (printLabels) std::cout << "Region: " << region[0] << ", " << region[1] << ", " << region[2] << ", " << region[3] << ", " << region[4] << ", "  << region[5] << std::endl;
+    if (printLabels) {
+      std::cout << "Region: " << region[0] << ", " << region[1] << ", " << region[2] << ", " << region[3] << ", " << region[4] << ", "  << region[5] << std::endl;
+    }
 
     std::map<int, int> labels;
+    for ( int iI = region[0]; iI <= region[3]; iI++ ) {
+      for( int iJ = region[1]; iJ <= region[4]; iJ++ ) {
+        for( int iK = region[2]; iK <= region[5]; iK++ ) {
 
-    for( int iI=region[0]; iI<=region[3]; iI++ )
-    {
-      for( int iJ=region[1]; iJ<=region[4]; iJ++ )
-      {
-        for( int iK=region[2]; iK<=region[5]; iK++ )
-        {
           /* Get real space position */
-
           double iX = iI * imageSpacing[0] + imageOrigin[0] - x;
           double iY = iJ * imageSpacing[1] + imageOrigin[1] - y;
           double iZ = iK * imageSpacing[2] + imageOrigin[2] - z;
 
           /* If within the nose ball region */
-
           if( iX * iX + iY * iY + iZ * iZ <= radius * radius )
           {
             TIndex pixelIndex;
-
             pixelIndex[0] = iI;
             pixelIndex[1] = iJ;
             pixelIndex[2] = iK;
 
             int label = image->GetPixel( pixelIndex );
 
-            if( label != 0 ) labels[label] += 1; // Ignore label 0, it's always the background
+            // Ignore label 0, it's always the background
+            if( label != 0 ) {
+              labels[label] += 1;
+            }
           }
         }
       }
@@ -263,12 +252,12 @@ namespace AirwaySegmenter {
     int finalLabel = 0;
     int labelCount = 0;
 
-    for(std::map<int, int>::const_iterator it = labels.begin(); it != labels.end(); ++it)
-    {
-      if (printLabels) std::cout<<"Labels "<<it->first<<" :   "<<it->second<<std::endl;
+    for  (std::map<int, int>::const_iterator it = labels.begin(); it != labels.end(); ++it) {
+      if ( printLabels ) {
+        std::cout << "Labels " << it->first << " :   " << it->second << std::endl;
+      }
 
-      if (it->second > labelCount)
-      {
+      if (it->second > labelCount) {
         labelCount = it->second;
         finalLabel = it->first;
       }
@@ -527,12 +516,16 @@ namespace AirwaySegmenter {
     thresholdDifference->SetOutsideValue( 1 );
     thresholdDifference->SetInsideValue( 0 );
     thresholdDifference->SetInput( thresholdClosing->GetInput() ); // The closed image was the input of the closing threshold (we don't want to re-run a fast marching)
+    TRY_UPDATE( thresholdDifference );
+    DEBUG_WRITE_LABEL_IMAGE( thresholdDifference );
 
     /* The masking */
     typedef itk::MaskImageFilter<LabelImageType, LabelImageType, LabelImageType > TMaskImageFilter;
     typename TMaskImageFilter::Pointer absoluteValueDifferenceFilterMasked = TMaskImageFilter::New();
     absoluteValueDifferenceFilterMasked->SetInput1( absoluteValueDifferenceFilter->GetOutput() );
     absoluteValueDifferenceFilterMasked->SetInput2( thresholdDifference->GetOutput() ); // Second input is the mask
+    TRY_UPDATE( absoluteValueDifferenceFilterMasked );
+    DEBUG_WRITE_LABEL_IMAGE( absoluteValueDifferenceFilterMasked );
 
     /* Extract largest component of the difference */
     if (args.bDebug) {
@@ -560,14 +553,13 @@ namespace AirwaySegmenter {
 
     int componentNumber = 0;
 
-    if (args.iComponent <= 0)
-    {
+    if (args.iComponent <= 0) {
       componentNumber = LabelIt<T>(relabel->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
-      if (componentNumber <= 0 ) componentNumber = LabelIt<T>(relabel->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
-      std::cout<<"Label found = "<<componentNumber<<std::endl;
-    }
-    else
-    {
+      if (componentNumber <= 0 ) {
+        componentNumber = LabelIt<T>(relabel->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
+      }
+      std::cout << "Label found = " << componentNumber << std::endl;
+    } else {
       componentNumber = args.iComponent;
     }
 
@@ -973,6 +965,39 @@ namespace AirwaySegmenter {
     TRY_UPDATE( finalAirwayThreshold );
     DEBUG_WRITE_LABEL_IMAGE( finalAirwayThreshold );
 
+    /* Finally paste the ball back */
+    if (args.bDebug) {
+      std::cout << "Putting the branches back ... " << std::endl;
+    }
+
+    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ ) {
+      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ ) {
+        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ ) {
+          double iX = iI * imageSpacing[0] + imageOrigin[0] - ballX;
+          double iY = iJ * imageSpacing[1] + imageOrigin[1] - ballY;
+          double iZ = iK * imageSpacing[2] + imageOrigin[2] - ballZ;
+
+          if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius ) {
+            TIndex pixelIndex;
+
+            pixelIndex[0] = iI;
+            pixelIndex[1] = iJ;
+            pixelIndex[2] = iK;
+
+            TIndex pixelIndexBranch;
+
+            pixelIndexBranch[0] = iI - ballRegion[0];
+            pixelIndexBranch[1] = iJ - ballRegion[1];
+            pixelIndexBranch[2] = iK - ballRegion[2];
+
+            if( cleanedBranchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) {
+              relabelFinalWithoutLung->GetOutput()->SetPixel(pixelIndex, 1);
+            }
+          }
+        }
+      }
+    }
+
     // Add in fragments of the airway
     typename ConnectedThresholdFilterType::Pointer finalFragmentFilter =
       ConnectedThresholdFilterType::New();
@@ -1012,37 +1037,6 @@ namespace AirwaySegmenter {
     finalCombineThresholdFilter->SetInput( finalFragmentCombineFilter->GetOutput() );
     TRY_UPDATE( finalCombineThresholdFilter );
     DEBUG_WRITE_LABEL_IMAGE( finalCombineThresholdFilter );
-
-    /* Finally paste the ball back */
-    if (args.bDebug) std::cout << "Putting the branches back ... " << std::endl;
-
-    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ ) {
-      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ ) {
-        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ ) {
-          double iX = iI * imageSpacing[0] + imageOrigin[0] - ballX;
-          double iY = iJ * imageSpacing[1] + imageOrigin[1] - ballY;
-          double iZ = iK * imageSpacing[2] + imageOrigin[2] - ballZ;
-
-          if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius ) {
-            TIndex pixelIndex;
-
-            pixelIndex[0] = iI;
-            pixelIndex[1] = iJ;
-            pixelIndex[2] = iK;
-
-            TIndex pixelIndexBranch;
-
-            pixelIndexBranch[0] = iI - ballRegion[0];
-            pixelIndexBranch[1] = iJ - ballRegion[1];
-            pixelIndexBranch[2] = iK - ballRegion[2];
-
-            if( cleanedBranchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) {
-              finalCombineThresholdFilter->GetOutput()->SetPixel(pixelIndex, 1);
-            }
-          }
-        }
-      }
-    }
 
     typename LabelImageType::Pointer finalSegmentation = finalCombineThresholdFilter->GetOutput();
 
