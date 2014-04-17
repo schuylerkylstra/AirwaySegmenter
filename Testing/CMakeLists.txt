@@ -22,6 +22,8 @@ add_test( NAME SegmentationTest_1003
             "${AIRWAY_SEGMENTER_LOCATION_RELEASE}"
             --lowerSeed 15.2148,163.774,-50.7766
             --upperSeed 34.5117,267.316,67.2616
+            --airwayFragmentSeeds 12.988,203.453,66.529
+            --airwayFragmentSeeds 12.988,180.216,-18.903
             --RAIImage
             --RAIImagePath "${TEST_OUTPUT_DIR}/1003_RAIImage.nrrd"
             "${TEST_DATA_DIR}/Input/1003.nrrd"
@@ -33,17 +35,17 @@ add_test( NAME SegmentationTest_1003
 )
 
 # add_test( NAME SegmentationTest1
-          # CONFIGURATIONS Release
-          # COMMAND AirwaySegmenterTestDriver
-            # "${AIRWAY_SEGMENTER_LOCATION_RELEASE}"
-            # --lowerSeed 5.22461,98.0924,-167.275
-            # --upperSeed 14.8379,201.318,-88.9896
-            # --RAIImage
-            # --RAIImagePath "${TEST_OUTPUT_DIR}/2005_RAIImage.nrrd"
-            # "${TEST_DATA_DIR}/Input/2005.nrrd"
-            # "${TEST_OUTPUT_DIR}/2005_Segmented.nrrd"
-            # "${TEST_OUTPUT_DIR}/2005_Segmented.vtp"
-          # --compare
-            # "${TEST_OUTPUT_DIR}/2005_Segmented.nrrd"
-            # "${TEST_BASELINES_DIR}/2005.nrrd"
+#           CONFIGURATIONS Release
+#           COMMAND AirwaySegmenterTestDriver
+#             "${AIRWAY_SEGMENTER_LOCATION_RELEASE}"
+#             --lowerSeed 5.22461,98.0924,-167.275
+#             --upperSeed 14.8379,201.318,-88.9896
+#             --RAIImage
+#             --RAIImagePath "${TEST_OUTPUT_DIR}/2005_RAIImage.nrrd"
+#             "${TEST_DATA_DIR}/Input/2005.nrrd"
+#             "${TEST_OUTPUT_DIR}/2005_Segmented.nrrd"
+#             "${TEST_OUTPUT_DIR}/2005_Segmented.vtp"
+#           --compare
+#             "${TEST_OUTPUT_DIR}/2005_Segmented.nrrd"
+#             "${TEST_BASELINES_DIR}/2005.nrrd"
 # )

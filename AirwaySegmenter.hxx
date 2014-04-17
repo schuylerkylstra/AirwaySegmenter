@@ -1,13 +1,30 @@
+/*=============================================================================
+//  --- Airway Segmenter ---+
+//
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the License.
+//  You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+//  Unless required by applicable law or agreed to in writing, software
+//  distributed under the License is distributed on an "AS IS" BASIS,
+//  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+//  See the License for the specific language governing permissions and
+//  limitations under the License.
+//
+//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol
+=============================================================================*/
 #ifndef AirwaySegmenter_hxx_included
 #define AirwaySegmenter_hxx_included
 
 /* ITK includes */
-
 #include <itkAbsoluteValueDifferenceImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkCastImageFilter.h>
 #include <itkConnectedComponentImageFilter.h>
+#include <itkConnectedThresholdImageFilter.h>
 #include <itkImageDuplicator.h>
 #include <itkFastMarchingImageFilter.h>
 #include <itkImage.h>
@@ -553,7 +570,6 @@ namespace AirwaySegmenter {
       componentNumber = args.iComponent;
     }
 
-
     largestComponentThreshold->SetInput( relabel->GetOutput() );
     largestComponentThreshold->SetLowerThreshold( componentNumber ); // object #1
     largestComponentThreshold->SetUpperThreshold( componentNumber ); // object #1
@@ -562,21 +578,62 @@ namespace AirwaySegmenter {
     TRY_UPDATE( largestComponentThreshold );
     DEBUG_WRITE_LABEL_IMAGE( largestComponentThreshold );
 
+    typedef itk::ConnectedThresholdImageFilter< LabelImageType, LabelImageType >
+      ConnectedThresholdFilterType;
+    typename ConnectedThresholdFilterType::Pointer firstAirwayFragmentFilter =
+      ConnectedThresholdFilterType::New();
+    firstAirwayFragmentFilter->SetInput( relabel->GetOutput() );
+    firstAirwayFragmentFilter->SetLower( 1 );
+
+    // Add in fragmented components of the airway marked with seeds
+    LabelImageType * relabelImage = relabel->GetOutput();
+    for ( size_t i = 0; i < args.airwayFragmentSeeds.size(); ++i ) {
+      std::vector< float > fragmentSeed = args.airwayFragmentSeeds[i];
+
+      typename ConnectedThresholdFilterType::InputImageType::PointType point;
+      point[0] = -fragmentSeed[0];
+      point[1] = -fragmentSeed[1];
+      point[2] =  fragmentSeed[2];
+      std::cout << "Fragment seed " << i << ": " << point << std::endl;
+      typename ConnectedThresholdFilterType::IndexType index;
+      relabelImage->TransformPhysicalPointToIndex( point, index );
+      firstAirwayFragmentFilter->AddSeed( index );
+    }
+    TRY_UPDATE( firstAirwayFragmentFilter );
+    DEBUG_WRITE_LABEL_IMAGE( firstAirwayFragmentFilter );
+
+    // Now combine the fragments with the largest connected component.
+    typedef typename itk::AddImageFilter< LabelImageType > AddLabelImageFilterType;
+    typename AddLabelImageFilterType::Pointer firstFragmentCombineFilter =
+      AddLabelImageFilterType::New();
+    firstFragmentCombineFilter->SetInput1( largestComponentThreshold->GetOutput() );
+    firstFragmentCombineFilter->SetInput2( firstAirwayFragmentFilter->GetOutput() );
+    TRY_UPDATE( firstFragmentCombineFilter );
+    DEBUG_WRITE_LABEL_IMAGE( firstFragmentCombineFilter );
+
+    typename FinalThresholdingFilterType::Pointer firstCombineThresholdFilter =
+      FinalThresholdingFilterType::New();
+    firstCombineThresholdFilter->SetLowerThreshold( 1 );
+    firstCombineThresholdFilter->SetInsideValue( 1 );
+    firstCombineThresholdFilter->SetOutsideValue( 0 );
+    firstCombineThresholdFilter->SetInput( firstFragmentCombineFilter->GetOutput() );
+    TRY_UPDATE( firstCombineThresholdFilter );
+    DEBUG_WRITE_LABEL_IMAGE( firstCombineThresholdFilter );
+
     /* Now do another Otsu thresholding but just around the current segmentation */
 
     /*  For this, we need to make it first a little bit bigger */
 
-    typename ThresholdingFilterType::Pointer thresholdExtendedSegmentation =ThresholdingFilterType::New();
+    typename ThresholdingFilterType::Pointer extendSegmentation =
+      ThresholdingFilterType::New();
+    extendSegmentation->SetInput( FastMarchIt<T>(firstCombineThresholdFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius) ); // There are enough few seeds that they can all be considered as part of the trial seeds
+    extendSegmentation->SetLowerThreshold( 0.0 );
+    extendSegmentation->SetUpperThreshold( (sqrt(2.0)-1)*args.dMaxAirwayRadius ); // To make sure we get roughly twice the volume if the object would have a circular cross section
 
-    thresholdExtendedSegmentation->SetInput( FastMarchIt<T>(largestComponentThreshold->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius) ); // There are enough few seeds that they can all be considered as part of the trial seeds
-    thresholdExtendedSegmentation->SetLowerThreshold( 0.0 );
-
-    thresholdExtendedSegmentation->SetUpperThreshold( (sqrt(2.0)-1)*args.dMaxAirwayRadius ); // To make sure we get roughly twice the volume if the object would have a circular cross section
-
-    thresholdExtendedSegmentation->SetOutsideValue( 0 );
-    thresholdExtendedSegmentation->SetInsideValue( 1 );
-    TRY_UPDATE( thresholdExtendedSegmentation );
-    DEBUG_WRITE_LABEL_IMAGE( thresholdExtendedSegmentation );
+    extendSegmentation->SetOutsideValue( 0 );
+    extendSegmentation->SetInsideValue( 1 );
+    TRY_UPDATE( extendSegmentation );
+    DEBUG_WRITE_LABEL_IMAGE( extendSegmentation );
 
     /* Now do another Otsu thresholding but restrict the statistics to the currently obtained area  (custom ostu-threshold filter) */
     typedef itk::MaskedOtsuThresholdImageFilter<InputImageType, LabelImageType, LabelImageType >MaskedOtsuThresholdFilterType;
@@ -585,12 +642,13 @@ namespace AirwaySegmenter {
     // TODO: not sure about these inside/outside settings, check!!
     maskedOtsuThresholdFilter->SetInsideValue( 1 );
     maskedOtsuThresholdFilter->SetOutsideValue( 0 );
-    maskedOtsuThresholdFilter->SetMaskImage( thresholdExtendedSegmentation->GetOutput() );
+    maskedOtsuThresholdFilter->SetMaskImage( extendSegmentation->GetOutput() );
     maskedOtsuThresholdFilter->SetInput( originalImage );
     TRY_UPDATE( maskedOtsuThresholdFilter );
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsuThresholdFilter );
 
-    T dThreshold = maskedOtsuThresholdFilter->GetThreshold(); // Get the threshold used in the otsu-thresholding
+    // Get the threshold used in the otsu-thresholding
+    T dThreshold = maskedOtsuThresholdFilter->GetThreshold();
     std::cout << "Threshold computed: " << dThreshold << std::endl;
 
     airwayThreshold = dThreshold;
@@ -952,7 +1010,6 @@ namespace AirwaySegmenter {
     if (args.bDebug) std::cout << "The label " << nNumAirway << " is picked as the airway." << std::endl;
 
     typename FinalThresholdingFilterType::Pointer finalAirwayThreshold = FinalThresholdingFilterType::New();
-
     finalAirwayThreshold->SetInput( relabelFinalWithoutLung->GetOutput() );
     finalAirwayThreshold->SetLowerThreshold( nNumAirway );
     finalAirwayThreshold->SetUpperThreshold( nNumAirway );
@@ -960,6 +1017,45 @@ namespace AirwaySegmenter {
     finalAirwayThreshold->SetOutsideValue(0);
     TRY_UPDATE( finalAirwayThreshold );
     DEBUG_WRITE_LABEL_IMAGE( finalAirwayThreshold );
+
+    // Add in fragments of the airway
+    typename ConnectedThresholdFilterType::Pointer finalFragmentFilter =
+      ConnectedThresholdFilterType::New();
+    finalFragmentFilter->SetInput( relabelFinalWithoutLung->GetOutput() );
+    finalFragmentFilter->SetLower( 1 );
+
+    // Add in fragmented components of the airway marked with seeds
+    relabelImage = relabelFinalWithoutLung->GetOutput();
+    for ( size_t i = 0; i < args.airwayFragmentSeeds.size(); ++i ) {
+      std::vector< float > fragmentSeed = args.airwayFragmentSeeds[i];
+
+      typename ConnectedThresholdFilterType::InputImageType::PointType point;
+      point[0] = -fragmentSeed[0];
+      point[1] = -fragmentSeed[1];
+      point[2] =  fragmentSeed[2];
+      std::cout << "Fragment seed " << i << ": " << point << std::endl;
+      typename ConnectedThresholdFilterType::IndexType index;
+      relabelImage->TransformPhysicalPointToIndex( point, index );
+      finalFragmentFilter->AddSeed( index );
+    }
+    TRY_UPDATE( finalFragmentFilter );
+    DEBUG_WRITE_LABEL_IMAGE( finalFragmentFilter );
+
+    typename AddLabelImageFilterType::Pointer finalFragmentCombineFilter =
+      AddLabelImageFilterType::New();
+    finalFragmentCombineFilter->SetInput1( finalAirwayThreshold->GetOutput() );
+    finalFragmentCombineFilter->SetInput2( finalFragmentFilter->GetOutput() );
+    TRY_UPDATE( finalFragmentCombineFilter );
+    DEBUG_WRITE_LABEL_IMAGE( finalFragmentCombineFilter );
+
+    typename FinalThresholdingFilterType::Pointer finalCombineThresholdFilter =
+      FinalThresholdingFilterType::New();
+    finalCombineThresholdFilter->SetLowerThreshold( 1 );
+    finalCombineThresholdFilter->SetInsideValue( 1 );
+    finalCombineThresholdFilter->SetOutsideValue( 0 );
+    finalCombineThresholdFilter->SetInput( finalFragmentCombineFilter->GetOutput() );
+    TRY_UPDATE( finalCombineThresholdFilter );
+    DEBUG_WRITE_LABEL_IMAGE( finalCombineThresholdFilter );
 
     /* Finally paste the ball back */
     if (args.bDebug) std::cout << "Putting the branches back ... " << std::endl;
@@ -988,14 +1084,14 @@ namespace AirwaySegmenter {
             pixelIndexBranch[1] = iJ - ballRegion[1];
             pixelIndexBranch[2] = iK - ballRegion[2];
 
-            if( cleanedBranchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) finalAirwayThreshold->GetOutput()->SetPixel(pixelIndex, 1);
+            if( cleanedBranchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) finalCombineThresholdFilter->GetOutput()->SetPixel(pixelIndex, 1);
           }
         }
       }
     }
 
 
-    typename LabelImageType::Pointer finalSegmentation = finalAirwayThreshold->GetOutput();
+    typename LabelImageType::Pointer finalSegmentation = finalCombineThresholdFilter->GetOutput();
 
     /* Optionally remove the maxillary sinus(es) */
 

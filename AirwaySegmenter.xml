@@ -20,7 +20,7 @@
             <index>0</index>
             <default>None</default>
             <description><![CDATA[Input image to be segmented.]]></description>
-        </image>  
+        </image>
 
         <image>
             <name>outputImage</name>
@@ -39,13 +39,13 @@
           <description><![CDATA[Segmented surface image.]]></description>
         </geometry>
     </parameters>
-    
+
     <parameters>
         <label>Segmentation Seeds</label>
         <description><![CDATA[Used for automatically leave the
         lungs out of the segmentation.]]>
         </description>
-        
+
         <point multiple="false" coordinateSystem="ras">
             <name>lowerSeed</name>
             <label>Lower Seed</label>
@@ -62,7 +62,7 @@
             <maximum>50.0</maximum>
             <description><![CDATA[The radius of the lower seed.]]></description>
         </double>
-        
+
         <point multiple="false" coordinateSystem="ras">
             <name>upperSeed</name>
             <label>Upper Seed</label>
@@ -79,6 +79,21 @@
             <maximum>50.0</maximum>
             <description><![CDATA[The radius of the upper seed.]]></description>
         </double>
+    </parameters>
+
+    <parameters>
+      <label>Airway Fragment Seeds</label>
+      <description><![CDATA[Used to mark disconnected airway fragments that should be
+      included in the segmentation.]]>
+      </description>
+
+      <point multiple="true" coordinateSystem="ras">
+            <name>airwayFragmentSeeds</name>
+            <label>Airway Fragment Seeds</label>
+            <longflag>--airwayFragmentSeeds</longflag>
+            <description><![CDATA[Point placed within disconnected airway fragments.]]></description>
+            <default>None</default>
+      </point>
     </parameters>
 
     <parameters advanced="true">
@@ -161,7 +176,7 @@
             <default>true</default>
             <description><![CDATA[Choose whether or not the execution stop if a warning is found.]]></description>
         </boolean>
-        
+
         <boolean>
             <name>bDebug</name>
             <longflag>--debug</longflag>
@@ -169,7 +184,7 @@
             <default>false</default>
             <description><![CDATA[Choose whether or not to output the debug informations and images.]]></description>
         </boolean>
-        
+
         <string>
             <name>sDebugFolder</name>
             <longflag>--debugFolder</longflag>

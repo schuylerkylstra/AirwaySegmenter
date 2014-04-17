@@ -58,11 +58,16 @@ namespace
     std::cout << "upperSeed                    = " << upperSeed[0] << ", " << upperSeed[1] << ", " << upperSeed[2]  << std::endl;
     std::cout << "upperSeedRadius              = " << upperSeedRadius << std::endl;
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
+    for (size_t i = 0; i < airwayFragmentSeeds.size(); ++i) {
+      std::cout << "airwayFragmentSeed " << i << " = " << airwayFragmentSeeds[i][0] << ", "
+        << airwayFragmentSeeds[i][1] << ", " << airwayFragmentSeeds[i][2] << std::endl;
+    }
+    std::cout << "----------------------------------------------------------------------------------" << std::endl;
     std::cout << "dMaxAirwayRadius             = " << dMaxAirwayRadius << std::endl;
     std::cout << "dErodeDistance               = " << dErodeDistance << std::endl;
     std::cout << "iComponent                   = " << iComponent << std::endl;
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
-    for (int i = 0; i < maxillarySinusesSeeds.size(); ++i) std::cout << "maxillarySinusesSeeds      = " << maxillarySinusesSeeds[i][0] << ", " << maxillarySinusesSeeds[i][1] << ", " << maxillarySinusesSeeds[i][2] << std::endl;
+    for (size_t i = 0; i < maxillarySinusesSeeds.size(); ++i) std::cout << "maxillarySinusesSeed " << i << " = " << maxillarySinusesSeeds[i][0] << ", " << maxillarySinusesSeeds[i][1] << ", " << maxillarySinusesSeeds[i][2] << std::endl;
     std::cout << "maxillarySinusesSeedsRadius  = " << maxillarySinusesSeedsRadius << std::endl;
     std::cout << "erosionPercentage            = " << erosionPercentage << std::endl;
     std::cout << "bRemoveMaxillarySinuses      = " << bRemoveMaxillarySinuses << std::endl;
@@ -111,13 +116,13 @@ int main( int argc, char * argv[] )
   args.upperSeed       = upperSeed;
   args.upperSeedRadius = upperSeedRadius;
 
+  args.airwayFragmentSeeds = airwayFragmentSeeds;
+
   args.dMaxAirwayRadius             = dMaxAirwayRadius;
   args.dErodeDistance               = dErodeDistance;
   args.iComponent                   = iComponent;
 
-  for ( size_t i = 0; i < maxillarySinusesSeeds.size(); ++i ) {
-    args.maxillarySinusesSeeds.push_back( maxillarySinusesSeeds[i] );
-  }
+  args.maxillarySinusesSeeds = maxillarySinusesSeeds;
   args.maxillarySinusesSeedsRadius = maxillarySinusesSeedsRadius;
   args.erosionPercentage           = erosionPercentage;
   args.bRemoveMaxillarySinuses     = bRemoveMaxillarySinuses;

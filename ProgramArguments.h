@@ -36,6 +36,8 @@ public:
   double dErodeDistance;
   int    iComponent;
 
+  std::vector< std::vector< float > > airwayFragmentSeeds;
+
   std::vector< std::vector< float > > maxillarySinusesSeeds;
   double                              maxillarySinusesSeedsRadius;
   double                              erosionPercentage;
