@@ -33,6 +33,56 @@
 
 #include "ProgramArguments.h"
 
+#define DEBUG_WRITE_IMAGE( filter )                                     \
+    if ( args.bDebug ) {                                                \
+      typedef itk::ImageFileWriter< FloatImageType > WriterFloatType;   \
+      typename WriterFloatType::Pointer writer =                        \
+        WriterFloatType::New();                                         \
+                                                                        \
+      writer->SetInput( filter->GetOutput() );                          \
+      std::string filename = args.sDebugFolder;                         \
+      filename += "/"#filter".nrrd";                                    \
+      writer->SetFileName( filename );                                  \
+                                                                        \
+      try {                                                             \
+        writer->Update();                                               \
+      } catch ( itk::ExceptionObject & excep ) {                        \
+        std::cerr << "Exception caught "                                \
+          << "when writing " << filter                                  \
+          << ".nrrd!" << std::endl;                                     \
+        std::cerr << excep << std::endl;                                \
+      }                                                                 \
+    }                                                                   \
+
+#define DEBUG_WRITE_LABEL_IMAGE( filter )                               \
+    if ( args.bDebug ) {                                                \
+      typename WriterLabelType::Pointer writer =                        \
+        WriterLabelType::New();                                         \
+                                                                        \
+      writer->SetInput( filter->GetOutput() );                          \
+      std::string filename = args.sDebugFolder;                         \
+      filename += "/"#filter".nrrd";                                    \
+      writer->SetFileName( filename );                                  \
+                                                                        \
+      try {                                                             \
+        writer->Update();                                               \
+      } catch ( itk::ExceptionObject & excep ) {                        \
+        std::cerr << "Exception caught "                                \
+          << "when writing " << filter                                  \
+          << ".nrrd!" << std::endl;                                     \
+        std::cerr << excep << std::endl;                                \
+      }                                                                 \
+    }                                                                   \
+
+#define TRY_UPDATE( filter )                                            \
+    try {                                                               \
+      filter->Update();                                                 \
+    } catch ( itk::ExceptionObject & exception ) {                      \
+      std::cerr << "Exception caught when updating filter " #filter "!" \
+        << std::endl;                                                   \
+      std::cerr << exception << std::endl;                              \
+    }                                                                   \
+
 namespace AirwaySegmenter {
 
   /*******************************************************************/
@@ -106,15 +156,7 @@ namespace AirwaySegmenter {
 
     fastMarching->SetStoppingValue( airwayRadius + erodedDistance + 1 );
 
-    try
-    {
-      fastMarching->Update();
-    }
-    catch(itk::ExceptionObject & excep )
-    {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( fastMarching );
 
     return fastMarching->GetOutput();
   }
@@ -289,12 +331,8 @@ namespace AirwaySegmenter {
       resampleFilter->SetSize(originalImage->GetLargestPossibleRegion().GetSize());
       resampleFilter->SetOutputOrigin(originalImage->GetOrigin());
       resampleFilter->SetOutputSpacing(originalImage->GetSpacing());
-      try {
-        resampleFilter->Update();
-      } catch ( itk::ExceptionObject & excep ) {
-        std::cerr << "Exception caught in resampleFilter!\n";
-        std::cerr << excep << std::endl;
-      }
+      TRY_UPDATE( resampleFilter );
+      DEBUG_WRITE_LABEL_IMAGE( resampleFilter );
 
       originalImage = resampleFilter->GetOutput();
     }
@@ -306,54 +344,22 @@ namespace AirwaySegmenter {
       typename WriterType::Pointer writer = WriterType::New();
       writer->SetInput( originalImage);
       writer->SetFileName( args.sRAIImagePath.c_str() );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
+      TRY_UPDATE( writer );
     }
 
     /* Otsu thresholding first */
-
     typedef itk::OtsuThresholdImageFilter<InputImageType, LabelImageType > OtsuThresholdFilterType;
     typename OtsuThresholdFilterType::Pointer otsuThresholdFilter = OtsuThresholdFilterType::New();
 
     otsuThresholdFilter->SetInsideValue( 0 );
     otsuThresholdFilter->SetOutsideValue( 1 );
     otsuThresholdFilter->SetInput( originalImage );
-    try {
-      otsuThresholdFilter->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught in otsuThresholdFilter!\n";
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( otsuThresholdFilter );
+    DEBUG_WRITE_LABEL_IMAGE( otsuThresholdFilter );
 
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-      writer->SetInput( otsuThresholdFilter->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/otsu.nhdr";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl; std::cerr << excep << std::endl;
-      }
-    }
+    std::cout << "Initial Otsu threshold: " << otsuThresholdFilter->GetThreshold() << std::endl;
 
     /* Dilation */
-
     typedef itk::BinaryThresholdImageFilter<FloatImageType, LabelImageType > ThresholdingFilterType;
     typename ThresholdingFilterType::Pointer thresholdDilation = ThresholdingFilterType::New();
 
@@ -378,14 +384,11 @@ namespace AirwaySegmenter {
     aliveSeeds->Initialize();
 
     /* Nodes are created as stack variables and initialized with
-     * a value and an itk::Index position. NodeType node;
-     */
-
+     * a value and an itk::Index position. NodeType node; */
     NodeType node;
     node.SetValue( 0.0 );
 
     /* Loop through the output image and set all voxels to 0 seed voxels */
-
     ConstIteratorType binaryImageIterator( otsuThresholdFilter->GetOutput(),otsuThresholdFilter->GetOutput()->GetLargestPossibleRegion() );
     ConstIteratorType imageIterator( originalImage,originalImage->GetLargestPossibleRegion() );
 
@@ -417,73 +420,22 @@ namespace AirwaySegmenter {
     fastMarchingDilate->SetAlivePoints( aliveSeeds );
     fastMarchingDilate->SetInput( NULL );
     fastMarchingDilate->SetSpeedConstant( 1.0 );  // to solve a simple Eikonal equation
-    fastMarchingDilate->SetOutputSize( otsuThresholdFilter->GetOutput()->GetBufferedRegion().GetSize() ); // The FastMarchingImageFilter requires the user to specify the size of the image to be produced as output. This is done using the SetOutputSize()
+     // The FastMarchingImageFilter requires the user to specify the size of the image to be produced as
+     // output. This is done using the SetOutputSize().
+    fastMarchingDilate->SetOutputSize( otsuThresholdFilter->GetOutput()->GetBufferedRegion().GetSize() );
     fastMarchingDilate->SetOutputRegion( otsuThresholdFilter->GetOutput()->GetBufferedRegion() );
     fastMarchingDilate->SetOutputSpacing( otsuThresholdFilter->GetOutput()->GetSpacing() );
     fastMarchingDilate->SetOutputOrigin( otsuThresholdFilter->GetOutput()->GetOrigin() );
     fastMarchingDilate->SetStoppingValue( args.dErodeDistance + args.dMaxAirwayRadius+ 1 );
-
-    try
-    {
-      fastMarchingDilate->Update();
-    }
-    catch(itk::ExceptionObject & excep )
-    {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typedef itk::ImageFileWriter<FloatImageType> WriterFloatType;
-      typename WriterFloatType::Pointer writer = WriterFloatType::New();
-
-      writer->SetInput( fastMarchingDilate->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/fmt-out.nhdr";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
+    TRY_UPDATE( fastMarchingDilate );
+    DEBUG_WRITE_IMAGE( fastMarchingDilate );
 
     thresholdDilation->SetInput( fastMarchingDilate->GetOutput() );
-    try {
-      thresholdDilation->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught when updating thresholdDilation filter\n";
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-      writer->SetInput( thresholdDilation->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/fmt-out.nhdr";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl; std::cerr << excep << std::endl;
-      }
-    }
+    TRY_UPDATE( thresholdDilation );
+    DEBUG_WRITE_LABEL_IMAGE( thresholdDilation );
 
     /* Erosion (Thus creating a closing) */
-
     typename ThresholdingFilterType::Pointer thresholdClosing = ThresholdingFilterType::New();
-
     thresholdClosing->SetLowerThreshold( 0.0 );
     thresholdClosing->SetUpperThreshold( args.dMaxAirwayRadius );
     thresholdClosing->SetOutsideValue( 1 );
@@ -535,106 +487,25 @@ namespace AirwaySegmenter {
     fastMarchingClose->SetOutputOrigin( thresholdDilation->GetOutput()->GetOrigin() );
 
     fastMarchingClose->SetStoppingValue( args.dErodeDistance + args.dMaxAirwayRadius+ 1 );
-
-    try
-    {
-      fastMarchingClose->Update();
-    }
-    catch(itk::ExceptionObject & excep )
-    {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typedef itk::ImageFileWriter<FloatImageType> WriterFloatType;
-      typename WriterFloatType::Pointer writer = WriterFloatType::New();
-      writer->SetInput( fastMarchingClose->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/fmt-out.nhdr";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
+    TRY_UPDATE( fastMarchingClose );
+    DEBUG_WRITE_IMAGE( fastMarchingClose );
 
     thresholdClosing->SetInput( fastMarchingClose->GetOutput() );
-    try {
-      thresholdClosing->Update();
-    } catch(itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-      writer->SetInput( thresholdClosing->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/fmtIn-out.nhdr";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
+    TRY_UPDATE( thresholdClosing );
+    DEBUG_WRITE_LABEL_IMAGE( thresholdClosing );
 
     /* Difference between closed image and ostu-threshold of the original one */
-
     typedef itk::AbsoluteValueDifferenceImageFilter<LabelImageType, LabelImageType, LabelImageType > TAbsoluteValueDifferenceFilter;
     typename TAbsoluteValueDifferenceFilter::Pointer absoluteValueDifferenceFilter = TAbsoluteValueDifferenceFilter::New();
 
     absoluteValueDifferenceFilter->SetInput1( otsuThresholdFilter->GetOutput() );
     absoluteValueDifferenceFilter->SetInput2( thresholdClosing->GetOutput() );
-    try {
-      absoluteValueDifferenceFilter->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-      writer->SetInput( absoluteValueDifferenceFilter->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/avd.nhdr";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
+    TRY_UPDATE( absoluteValueDifferenceFilter );
+    DEBUG_WRITE_LABEL_IMAGE( absoluteValueDifferenceFilter );
 
     /* Create a sligthly eroded version of the closed image
-     * This is to prevent any weird effects at the outside of the face
-     */
-
-
+     * This is to prevent any weird effects at the outside of the face */
     typename ThresholdingFilterType::Pointer thresholdDifference = ThresholdingFilterType::New();
-
     thresholdDifference->SetLowerThreshold( 0.0 ); // We can get this simply by taking a slightly different threshold for the marching in case
     thresholdDifference->SetUpperThreshold( args.dMaxAirwayRadius+args.dErodeDistance );
     thresholdDifference->SetOutsideValue( 1 );
@@ -643,7 +514,6 @@ namespace AirwaySegmenter {
     thresholdDifference->SetInput( thresholdClosing->GetInput() ); // The closed image was the input of the closing threshold (we don't want to re-run a fast marching)
 
     /* The masking */
-
     typedef itk::MaskImageFilter<LabelImageType, LabelImageType, LabelImageType > TMaskImageFilter;
     typename TMaskImageFilter::Pointer absoluteValueDifferenceFilterMasked = TMaskImageFilter::New();
 
@@ -664,17 +534,11 @@ namespace AirwaySegmenter {
 
     //connected->SetFullyConnected( true );
     connected->SetInput ( absoluteValueDifferenceFilterMasked->GetOutput());
+    // Label the components in the image and relabel them so that object numbers
+    // increase as the size of the objects decrease.
     relabel->SetInput( connected->GetOutput() );
     relabel->SetNumberOfObjectsToPrint( 5 );
-    try {
-      relabel->Update(); // Label the components in the image and
-                         // relabel them so that object numbers
-                         // increase as the size of the objects
-                         // decrease
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( relabel );
 
     int componentNumber = 0;
 
@@ -695,34 +559,8 @@ namespace AirwaySegmenter {
     largestComponentThreshold->SetUpperThreshold( componentNumber ); // object #1
     largestComponentThreshold->SetInsideValue(1);
     largestComponentThreshold->SetOutsideValue(0);
-    try {
-      largestComponentThreshold->Update(); // Pull out the largest
-                                           // object
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer lccWriter = WriterLabelType::New();
-      lccWriter->SetInput( largestComponentThreshold->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/lcc.nhdr";
-      lccWriter->SetFileName( filename );
-
-      try
-      {
-        lccWriter->Update();
-      }
-      catch( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-
-      std::cout << "done." << std::endl;
-    }
+    TRY_UPDATE( largestComponentThreshold );
+    DEBUG_WRITE_LABEL_IMAGE( largestComponentThreshold );
 
     /* Now do another Otsu thresholding but just around the current segmentation */
 
@@ -737,76 +575,25 @@ namespace AirwaySegmenter {
 
     thresholdExtendedSegmentation->SetOutsideValue( 0 );
     thresholdExtendedSegmentation->SetInsideValue( 1 );
-
-    try {
-      thresholdExtendedSegmentation->Update(); // Force it so we have
-                                               // the mask available
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-      writer->SetInput( thresholdExtendedSegmentation->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/seg-extended.nhdr";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
+    TRY_UPDATE( thresholdExtendedSegmentation );
+    DEBUG_WRITE_LABEL_IMAGE( thresholdExtendedSegmentation );
 
     /* Now do another Otsu thresholding but restrict the statistics to the currently obtained area  (custom ostu-threshold filter) */
-
     typedef itk::MaskedOtsuThresholdImageFilter<InputImageType, LabelImageType, LabelImageType >MaskedOtsuThresholdFilterType;
     typename MaskedOtsuThresholdFilterType::Pointer maskedOtsuThresholdFilter = MaskedOtsuThresholdFilterType::New();
 
     // TODO: not sure about these inside/outside settings, check!!
-
     maskedOtsuThresholdFilter->SetInsideValue( 1 );
     maskedOtsuThresholdFilter->SetOutsideValue( 0 );
     maskedOtsuThresholdFilter->SetMaskImage( thresholdExtendedSegmentation->GetOutput() );
     maskedOtsuThresholdFilter->SetInput( originalImage );
-    try {
-      maskedOtsuThresholdFilter->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( maskedOtsuThresholdFilter );
+    DEBUG_WRITE_LABEL_IMAGE( maskedOtsuThresholdFilter );
 
     T dThreshold = maskedOtsuThresholdFilter->GetThreshold(); // Get the threshold used in the otsu-thresholding
     std::cout << "Threshold computed: " << dThreshold << std::endl;
 
     airwayThreshold = dThreshold;
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer labelWriterMaskedOtsu = WriterLabelType::New();
-
-      labelWriterMaskedOtsu->SetInput( maskedOtsuThresholdFilter->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/otst-out-masked.nhdr";
-      labelWriterMaskedOtsu->SetFileName( filename );
-
-      try
-      {
-        labelWriterMaskedOtsu->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
 
     /* Now mask it again and extract the largest component */
 
@@ -816,41 +603,10 @@ namespace AirwaySegmenter {
 
     maskedOtsu->SetInput1( maskedOtsuThresholdFilter->GetOutput() );
     maskedOtsu->SetInput2( thresholdDifference->GetOutput() ); // Second input is the mask
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-      writer->SetInput( maskedOtsu->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/maskedOtsu-out_second.nhdr";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-
-      std::cout << " Update ... " << std::endl;
-    }
-
-    try
-    {
-      maskedOtsu->Update();
-    }
-    catch ( itk::ExceptionObject & excep )
-    {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-      return EXIT_FAILURE;
-    }
+    TRY_UPDATE( maskedOtsu );
+    DEBUG_WRITE_LABEL_IMAGE( maskedOtsu );
 
     /* Extract largest the airway with the lungs */
-
     if (args.bDebug) std::cout << "Extracting final largest connected component ... ";
 
     typename ConnectedComponentType::Pointer connectedFinal = ConnectedComponentType::New();
@@ -860,15 +616,7 @@ namespace AirwaySegmenter {
     connectedFinal->SetInput ( maskedOtsu->GetOutput());
     relabelFinal->SetInput( connectedFinal->GetOutput() );
     relabelFinal->SetNumberOfObjectsToPrint( 5 );
-    try {
-      relabelFinal->Update(); // Label the components in the image and
-                              // relabel them so that object numbers
-                              // increase as the size of the objects
-                              // decrease
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( relabelFinal );
 
     if (args.iComponent <= 0)
     {
@@ -886,33 +634,8 @@ namespace AirwaySegmenter {
     finalThreshold->SetUpperThreshold( componentNumber ); // object #1
     finalThreshold->SetInsideValue(1);
     finalThreshold->SetOutsideValue(0);
-    try {
-      finalThreshold->Update(); // Pull out the largest object
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-      writer->SetInput( finalThreshold->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/airway-with-lung.nrrd";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-
-      std::cout<<"..done"<<std::endl;
-    }
+    TRY_UPDATE( finalThreshold );
+    DEBUG_WRITE_LABEL_IMAGE( finalThreshold );
 
     /* Second part of the code : getting rid of lung automatically */
 
@@ -1021,29 +744,19 @@ namespace AirwaySegmenter {
     /* Clean up the ball region: First pass */
 
     /* First with simple threshold */
-
     typename ConnectedComponentType::Pointer connectedBranch = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabelBranch = RelabelComponentType::New();
 
     connectedBranch->SetInput( imageBranch );
-    try {
-      connectedBranch->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( connectedBranch );
+    DEBUG_WRITE_LABEL_IMAGE( connectedBranch );
 
     relabelBranch->SetInput( connectedBranch->GetOutput() );
     relabelBranch->SetNumberOfObjectsToPrint( 5 );
-    try {
-      relabelBranch->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( relabelBranch );
+    DEBUG_WRITE_LABEL_IMAGE( relabelBranch );
 
     /* Get geometry statistics */
-
     typedef itk::LabelGeometryImageFilter<LabelImageType> LabelGeometryImageFilterType;
     typename LabelGeometryImageFilterType::Pointer labelBranchGeometry = LabelGeometryImageFilterType::New();
 
@@ -1051,16 +764,11 @@ namespace AirwaySegmenter {
     labelBranchGeometry->CalculateOrientedBoundingBoxOn();
 
     /* Just in case */
-
     labelBranchGeometry->CalculateOrientedLabelRegionsOff();
     labelBranchGeometry->CalculatePixelIndicesOff();
     labelBranchGeometry->CalculateOrientedIntensityRegionsOff();
-    try {
-      labelBranchGeometry->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( labelBranchGeometry );
+    DEBUG_WRITE_LABEL_IMAGE( labelBranchGeometry );
 
     int nBranchParts = relabelBranch->GetNumberOfObjects();
     int nBranchId = 1;
@@ -1107,32 +815,8 @@ namespace AirwaySegmenter {
     branchThreshold->SetUpperThreshold( nBranchId );
     branchThreshold->SetInsideValue(1);
     branchThreshold->SetOutsideValue(0);
-    try {
-      branchThreshold->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-      writer->SetInput( branchThreshold->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/FinalThresholdNoBranch.nrrd";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
+    TRY_UPDATE( branchThreshold );
+    DEBUG_WRITE_LABEL_IMAGE( branchThreshold );
 
     typename ConnectedComponentType::Pointer connectedFinalWithoutLung = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabelFinalWithoutLung = RelabelComponentType::New();
@@ -1140,41 +824,13 @@ namespace AirwaySegmenter {
     connectedFinalWithoutLung->SetInput( finalThreshold->GetOutput() );
     relabelFinalWithoutLung->SetInput( connectedFinalWithoutLung->GetOutput() );
     relabelFinalWithoutLung->SetNumberOfObjectsToPrint( 5 );
-    try {
-      relabelFinalWithoutLung->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-      writer->SetInput( relabelFinalWithoutLung->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/relabelFinalWithLung.nrrd";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-
-      std::cout << "Relabeled" << std::endl;
-    }
+    TRY_UPDATE( relabelFinalWithoutLung );
+    DEBUG_WRITE_LABEL_IMAGE( relabelFinalWithoutLung );
 
     /* Clean up the ball region: Second pass */
-
     if (args.bDebug) std::cout << "Get rid of residual lungs in the ball region ... " << std::endl;
 
     /* First get the original data in the lung+airway regions of the ball */
-
     for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ )
     {
       for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ )
@@ -1210,32 +866,8 @@ namespace AirwaySegmenter {
     otsuThresholdBranchFilter->SetInsideValue(1);
     otsuThresholdBranchFilter->SetOutsideValue(0);
     otsuThresholdBranchFilter->SetInput( imageBranch );
-    try {
-      otsuThresholdBranchFilter->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
-
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-      writer->SetInput( relabelFinalWithoutLung->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "otsuBranchCleaning.nrrd";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
+    TRY_UPDATE( otsuThresholdBranchFilter );
+    DEBUG_WRITE_LABEL_IMAGE( otsuThresholdBranchFilter );
 
     if (args.bDebug) std::cout << "Getting rid of the small lungs parts ... " << std::endl;
 
@@ -1261,46 +893,19 @@ namespace AirwaySegmenter {
       }
     }
 
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-      writer->SetInput( relabelFinalWithoutLung->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "CleanedBallRegion.nrrd";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
+    DEBUG_WRITE_LABEL_IMAGE( relabelFinalWithoutLung );
 
     typename ConnectedComponentType::Pointer connectedCleanedBranch = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabelCleanedBranch = RelabelComponentType::New();
 
     connectedCleanedBranch->SetInput( imageBranch );
-    try {
-      connectedCleanedBranch->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( connectedCleanedBranch )
+    DEBUG_WRITE_LABEL_IMAGE( connectedCleanedBranch );
 
     relabelCleanedBranch->SetInput( connectedCleanedBranch->GetOutput() );
     relabelCleanedBranch->SetNumberOfObjectsToPrint( 5 );
-    try {
-      relabelCleanedBranch->Update(); // Of course, get rid of any
-                                      // small residual effects
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( relabelCleanedBranch );
+    DEBUG_WRITE_LABEL_IMAGE( connectedCleanedBranch );
 
     typename FinalThresholdingFilterType::Pointer cleanedBranchThreshold = FinalThresholdingFilterType::New();
 
@@ -1309,12 +914,8 @@ namespace AirwaySegmenter {
     cleanedBranchThreshold->SetUpperThreshold( 1 );
     cleanedBranchThreshold->SetInsideValue( 1 );
     cleanedBranchThreshold->SetOutsideValue( 0 );
-    try {
-      cleanedBranchThreshold->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( cleanedBranchThreshold );
+    DEBUG_WRITE_LABEL_IMAGE( cleanedBranchThreshold );
 
     if (args.bDebug) std::cout << "Final airway label ... " << std::endl;
 
@@ -1357,35 +958,10 @@ namespace AirwaySegmenter {
     finalAirwayThreshold->SetUpperThreshold( nNumAirway );
     finalAirwayThreshold->SetInsideValue(1);
     finalAirwayThreshold->SetOutsideValue(0);
-    try {
-      finalAirwayThreshold->Update();
-    } catch ( itk::ExceptionObject & excep ) {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( finalAirwayThreshold );
+    DEBUG_WRITE_LABEL_IMAGE( finalAirwayThreshold );
 
-    if (args.bDebug)
-    {
-      typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-      writer->SetInput( finalAirwayThreshold->GetOutput() );
-      std::string filename = sDebugFolder;
-      filename += "/final_threshold.nrrd";
-      writer->SetFileName( filename );
-
-      try
-      {
-        writer->Update();
-      }
-      catch ( itk::ExceptionObject & excep )
-      {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-    }
-
-    /* Finaly paste the ball back */
-
+    /* Finally paste the ball back */
     if (args.bDebug) std::cout << "Putting the branches back ... " << std::endl;
 
     for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ )
@@ -1419,9 +995,9 @@ namespace AirwaySegmenter {
     }
 
 
-    typename LabelImageType::Pointer FinalSegmentation = finalAirwayThreshold->GetOutput();
+    typename LabelImageType::Pointer finalSegmentation = finalAirwayThreshold->GetOutput();
 
-    /* Optionnaly remove the maxillary sinus(es) */
+    /* Optionally remove the maxillary sinus(es) */
 
     if (args.bRemoveMaxillarySinuses)
     {
@@ -1440,28 +1016,9 @@ namespace AirwaySegmenter {
       thresholdSlightErosion->SetOutsideValue( 0 );
       thresholdSlightErosion->SetInsideValue( 1 );
 
-      thresholdSlightErosion->SetInput( FastMarchIt<T>( FinalSegmentation, "In", args.dErodeDistance, args.dMaxAirwayRadius));
+      thresholdSlightErosion->SetInput( FastMarchIt<T>( finalSegmentation, "In", args.dErodeDistance, args.dMaxAirwayRadius));
       thresholdSlightErosion->Update();
-
-      if (args.bDebug)
-      {
-        typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-        writer->SetInput( thresholdSlightErosion->GetOutput() );
-        std::string filename = sDebugFolder;
-        filename += "SlightlyEroderSegmentation.nrrd";
-        writer->SetFileName( filename );
-
-        try
-        {
-          writer->Update();
-        }
-        catch( itk::ExceptionObject & excep )
-        {
-          std::cerr << "Exception caught !" << std::endl;
-          std::cerr << excep << std::endl;
-        }
-      }
+      DEBUG_WRITE_LABEL_IMAGE( thresholdSlightErosion );
 
       /* Create the image that we will substract from the segmentation
        * It should be all the maxillary sinuses
@@ -1490,12 +1047,8 @@ namespace AirwaySegmenter {
       typename DuplicatorType::Pointer duplicator = DuplicatorType::New(); // The blank image is declared with a duplicator>. Should probably be done otherwise
 
       duplicator->SetInputImage(relabelSinuses->GetOutput());
-      try {
-        duplicator->Update();
-      } catch ( itk::ExceptionObject & excep ) {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
+      TRY_UPDATE( duplicator );
+      DEBUG_WRITE_LABEL_IMAGE( duplicator );
 
       typename LabelImageType::Pointer sinusesImage = duplicator->GetOutput();
 
@@ -1517,120 +1070,42 @@ namespace AirwaySegmenter {
           if (args.bNoWarning) return EXIT_FAILURE; else continue;
         }
 
-        typename LabelThresholdFilterType::Pointer thresholdOut = LabelThresholdFilterType::New();
-
-        thresholdOut->SetLowerThreshold( seedLabel );
-        thresholdOut->SetUpperThreshold( seedLabel );
-        thresholdOut->SetOutsideValue( 0 );
-        thresholdOut->SetInsideValue( 1 );
-        thresholdOut->SetInput( relabelSinuses->GetOutput() );
-        try {
-          thresholdOut->Update(); //Threshold out everything but the
-                                  //region given by the seed
-        } catch ( itk::ExceptionObject & excep ) {
-          std::cerr << "Exception caught !" << std::endl;
-          std::cerr << excep << std::endl;
-        }
+        typename LabelThresholdFilterType::Pointer thresholdOut =
+          LabelThresholdFilterType::New();
+        TRY_UPDATE( thresholdOut );
+        DEBUG_WRITE_LABEL_IMAGE( thresholdOut );
 
         addFilter->SetInput1( sinusesImage );
         addFilter->SetInput2( thresholdOut->GetOutput() );
-        try {
-          addFilter->Update(); //Add it to the blank image
-        } catch ( itk::ExceptionObject & excep ) {
-          std::cerr << "Exception caught !" << std::endl;
-          std::cerr << excep << std::endl;
-        }
+        TRY_UPDATE( addFilter );
+        DEBUG_WRITE_LABEL_IMAGE( addFilter );
+
 
         sinusesImage = addFilter->GetOutput();
       }
 
-      if (args.bDebug)
-      {
-        typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-        writer->SetInput( addFilter->GetOutput() );
-        std::string filename = sDebugFolder;
-        filename += "UndesiredParts.nrrd";
-        writer->SetFileName( filename );
-
-        try
-        {
-          writer->Update();
-        }
-        catch( itk::ExceptionObject & excep )
-        {
-          std::cerr << "Exception caught !" << std::endl;
-          std::cerr << excep << std::endl;
-        }
-      }
-
       /* Dilate the undesired part
-       * (So they approxemately are their original size)
+       * (So they approximately are their original size)
        * Note that the erosion is very small
        * Using custom fast marching function
        */
+      typename ThresholdingFilterType::Pointer thresholdSlightDilation = ThresholdingFilterType::New();
 
-      typename ThresholdingFilterType::Pointer thresholdSlighDilation = ThresholdingFilterType::New();
-
-      thresholdSlighDilation->SetLowerThreshold( 0 );
-      thresholdSlighDilation->SetUpperThreshold( args.dMaxAirwayRadius*args.erosionPercentage ); //Should be set ?
-      thresholdSlighDilation->SetOutsideValue( 1 );
-      thresholdSlighDilation->SetInsideValue( 0 );
-      thresholdSlighDilation->SetInput( FastMarchIt<T>( addFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius));
-      try {
-        thresholdSlighDilation->Update();
-      } catch ( itk::ExceptionObject & excep ) {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
-
-      if (args.bDebug)
-      {
-        typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-        writer->SetInput( thresholdSlighDilation->GetOutput() );
-        std::string filename = sDebugFolder;
-        filename += "UndesiredParts_NormalSize.nrrd";
-        writer->SetFileName( filename );
-
-        try
-        {
-          writer->Update();
-        }
-        catch( itk::ExceptionObject & excep )
-        {
-          std::cerr << "Exception caught !" << std::endl;
-          std::cerr << excep << std::endl;
-        }
-      }
+      thresholdSlightDilation->SetLowerThreshold( 0 );
+      thresholdSlightDilation->SetUpperThreshold( args.dMaxAirwayRadius*args.erosionPercentage ); //Should be set ?
+      thresholdSlightDilation->SetOutsideValue( 1 );
+      thresholdSlightDilation->SetInsideValue( 0 );
+      thresholdSlightDilation->SetInput( FastMarchIt<T>( addFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius));
+      TRY_UPDATE( thresholdSlightDilation );
+      DEBUG_WRITE_LABEL_IMAGE( thresholdSlightDilation );
 
       /* Mask all the undesired part from the segmentation */
-
       typename TMaskImageFilter::Pointer substractSinusesMask = TMaskImageFilter::New();
-
-      substractSinusesMask->SetMaskImage( thresholdSlighDilation->GetOutput() );
-      substractSinusesMask->SetInput( FinalSegmentation );
+      substractSinusesMask->SetMaskImage( thresholdSlightDilation->GetOutput() );
+      substractSinusesMask->SetInput( finalSegmentation );
       substractSinusesMask->Update();
-
-      if (args.bDebug)
-      {
-        typename WriterLabelType::Pointer writer = WriterLabelType::New();
-
-        writer->SetInput( substractSinusesMask->GetOutput() );
-        std::string filename = sDebugFolder;
-        filename += "TrimmedAirway_Dirty.nrrd";
-        writer->SetFileName( filename );
-
-        try
-        {
-          writer->Update();
-        }
-        catch( itk::ExceptionObject & excep )
-        {
-          std::cerr << "Exception caught !" << std::endl;
-          std::cerr << excep << std::endl;
-        }
-      }
+      TRY_UPDATE( substractSinusesMask );
+      DEBUG_WRITE_LABEL_IMAGE( substractSinusesMask );
 
       /* Clean up */
 
@@ -1640,12 +1115,8 @@ namespace AirwaySegmenter {
       connectedCleanUp->SetInput( substractSinusesMask->GetOutput() );
       relabelCleanUp->SetInput( connectedCleanUp->GetOutput() );
       relabelCleanUp->SetNumberOfObjectsToPrint( 5 );
-      try {
-        relabelCleanUp->Update();
-      } catch ( itk::ExceptionObject & excep ) {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
+      TRY_UPDATE( relabelCleanUp );
+      DEBUG_WRITE_LABEL_IMAGE( relabelCleanUp );
 
       nNumAirway = LabelIt<T>(relabelCleanUp->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
 
@@ -1656,19 +1127,15 @@ namespace AirwaySegmenter {
       thresholdCleanUp->SetOutsideValue( 0 );
       thresholdCleanUp->SetInsideValue( 1 );
       thresholdCleanUp->SetInput( relabelCleanUp->GetOutput() );
-      try {
-        thresholdCleanUp->Update();
-      } catch ( itk::ExceptionObject & excep ) {
-        std::cerr << "Exception caught !" << std::endl;
-        std::cerr << excep << std::endl;
-      }
+      TRY_UPDATE( thresholdCleanUp );
+      DEBUG_WRITE_LABEL_IMAGE( thresholdCleanUp );
 
-      FinalSegmentation = thresholdCleanUp->GetOutput();
+      finalSegmentation = thresholdCleanUp->GetOutput();
     }
 
     if (args.bDebug) std::cout << "Writing the final image ... " << std::endl;
 
-    output = FinalSegmentation;
+    output = finalSegmentation;
 
     if (args.bDebug) std::cout << "done." << std::endl;
 
@@ -1702,16 +1169,7 @@ namespace AirwaySegmenter {
     // Read the input file
     typename ReaderType::Pointer reader = ReaderType::New();
     reader->SetFileName( args.inputImage ); // rRead the input image
-
-    try
-    {
-      reader->Update();
-    }
-    catch ( itk::ExceptionObject & excep )
-    {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-    }
+    TRY_UPDATE( reader );
 
     // Run the algorithm
     typename OutputImageType::Pointer algorithmOutput;
@@ -1726,17 +1184,7 @@ namespace AirwaySegmenter {
     typename WriterLabelType::Pointer writer = WriterLabelType::New();
     writer->SetInput( algorithmOutput );
     writer->SetFileName( args.outputImage.c_str() );
-
-    try
-    {
-      writer->Update();
-    }
-    catch( itk::ExceptionObject & excep )
-    {
-      std::cerr << "Exception caught !" << std::endl;
-      std::cerr << excep << std::endl;
-      return EXIT_FAILURE;
-    }
+    TRY_UPDATE( writer );
 
     /* Write Surface */
     if ( args.outputGeometry != "" ) {
@@ -1750,16 +1198,7 @@ namespace AirwaySegmenter {
       surfaceWriter->SetMaskImage( algorithmOutput );
       surfaceWriter->SetInput( reader->GetOutput() );
       surfaceWriter->SetThreshold( airwayThreshold );
-
-      try
-        {
-          surfaceWriter->Update();
-        }
-      catch( itk::ExceptionObject & excep )
-        {
-          std::cerr << "Exception caught !" << std::endl;
-          std::cerr << excep << std::endl;
-        }
+      TRY_UPDATE( surfaceWriter );
     }
 
     return EXIT_SUCCESS;
