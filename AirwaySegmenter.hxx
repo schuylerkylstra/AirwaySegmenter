@@ -514,32 +514,30 @@ namespace AirwaySegmenter {
     /* Difference between closed image and ostu-threshold of the original one */
     typedef itk::AbsoluteValueDifferenceImageFilter<LabelImageType, LabelImageType, LabelImageType > TAbsoluteValueDifferenceFilter;
     typename TAbsoluteValueDifferenceFilter::Pointer absoluteValueDifferenceFilter = TAbsoluteValueDifferenceFilter::New();
-
     absoluteValueDifferenceFilter->SetInput1( otsuThresholdFilter->GetOutput() );
     absoluteValueDifferenceFilter->SetInput2( thresholdClosing->GetOutput() );
     TRY_UPDATE( absoluteValueDifferenceFilter );
     DEBUG_WRITE_LABEL_IMAGE( absoluteValueDifferenceFilter );
 
-    /* Create a sligthly eroded version of the closed image
+    /* Create a slightly eroded version of the closed image
      * This is to prevent any weird effects at the outside of the face */
     typename ThresholdingFilterType::Pointer thresholdDifference = ThresholdingFilterType::New();
     thresholdDifference->SetLowerThreshold( 0.0 ); // We can get this simply by taking a slightly different threshold for the marching in case
     thresholdDifference->SetUpperThreshold( args.dMaxAirwayRadius+args.dErodeDistance );
     thresholdDifference->SetOutsideValue( 1 );
     thresholdDifference->SetInsideValue( 0 );
-
     thresholdDifference->SetInput( thresholdClosing->GetInput() ); // The closed image was the input of the closing threshold (we don't want to re-run a fast marching)
 
     /* The masking */
     typedef itk::MaskImageFilter<LabelImageType, LabelImageType, LabelImageType > TMaskImageFilter;
     typename TMaskImageFilter::Pointer absoluteValueDifferenceFilterMasked = TMaskImageFilter::New();
-
     absoluteValueDifferenceFilterMasked->SetInput1( absoluteValueDifferenceFilter->GetOutput() );
     absoluteValueDifferenceFilterMasked->SetInput2( thresholdDifference->GetOutput() ); // Second input is the mask
 
     /* Extract largest component of the difference */
-
-    if (args.bDebug) std::cout << "Extracting largest connected component ... ";
+    if (args.bDebug) {
+      std::cout << "Extracting largest connected component ... ";
+    }
 
     typedef itk::ConnectedComponentImageFilter<LabelImageType, LabelImageType > ConnectedComponentType;
     typedef itk::RelabelComponentImageFilter<LabelImageType, LabelImageType > RelabelComponentType;
@@ -549,13 +547,16 @@ namespace AirwaySegmenter {
     typename RelabelComponentType::Pointer relabel = RelabelComponentType::New();
     typename FinalThresholdingFilterType::Pointer largestComponentThreshold = FinalThresholdingFilterType::New();
 
-    //connected->SetFullyConnected( true );
     connected->SetInput ( absoluteValueDifferenceFilterMasked->GetOutput());
+    TRY_UPDATE( connected );
+    DEBUG_WRITE_LABEL_IMAGE( connected );
+
     // Label the components in the image and relabel them so that object numbers
     // increase as the size of the objects decrease.
     relabel->SetInput( connected->GetOutput() );
     relabel->SetNumberOfObjectsToPrint( 5 );
     TRY_UPDATE( relabel );
+    DEBUG_WRITE_LABEL_IMAGE( relabel );
 
     int componentNumber = 0;
 
@@ -621,27 +622,22 @@ namespace AirwaySegmenter {
     DEBUG_WRITE_LABEL_IMAGE( firstCombineThresholdFilter );
 
     /* Now do another Otsu thresholding but just around the current segmentation */
-
     /*  For this, we need to make it first a little bit bigger */
-
     typename ThresholdingFilterType::Pointer extendSegmentation =
       ThresholdingFilterType::New();
     extendSegmentation->SetInput( FastMarchIt<T>(firstCombineThresholdFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius) ); // There are enough few seeds that they can all be considered as part of the trial seeds
     extendSegmentation->SetLowerThreshold( 0.0 );
     extendSegmentation->SetUpperThreshold( (sqrt(2.0)-1)*args.dMaxAirwayRadius ); // To make sure we get roughly twice the volume if the object would have a circular cross section
-
     extendSegmentation->SetOutsideValue( 0 );
     extendSegmentation->SetInsideValue( 1 );
     TRY_UPDATE( extendSegmentation );
     DEBUG_WRITE_LABEL_IMAGE( extendSegmentation );
 
-    /* Now do another Otsu thresholding but restrict the statistics to the currently obtained area  (custom ostu-threshold filter) */
-    typedef itk::MaskedOtsuThresholdImageFilter<InputImageType, LabelImageType, LabelImageType >MaskedOtsuThresholdFilterType;
-    typename MaskedOtsuThresholdFilterType::Pointer maskedOtsuThresholdFilter = MaskedOtsuThresholdFilterType::New();
-
-    // TODO: not sure about these inside/outside settings, check!!
+    typename OtsuThresholdFilterType::Pointer maskedOtsuThresholdFilter = OtsuThresholdFilterType::New();
     maskedOtsuThresholdFilter->SetInsideValue( 1 );
     maskedOtsuThresholdFilter->SetOutsideValue( 0 );
+    maskedOtsuThresholdFilter->SetMaskValue( 1 );
+    maskedOtsuThresholdFilter->MaskOutputOn();
     maskedOtsuThresholdFilter->SetMaskImage( extendSegmentation->GetOutput() );
     maskedOtsuThresholdFilter->SetInput( originalImage );
     TRY_UPDATE( maskedOtsuThresholdFilter );
@@ -653,50 +649,11 @@ namespace AirwaySegmenter {
 
     airwayThreshold = dThreshold;
 
-    /* Now mask it again and extract the largest component */
-
-    if (args.bDebug) std::cout << " mask it again and extract the largest component ... " << std::endl;
-
-    typename TMaskImageFilter::Pointer maskedOtsu = TMaskImageFilter::New();
-
-    maskedOtsu->SetInput1( maskedOtsuThresholdFilter->GetOutput() );
-    maskedOtsu->SetInput2( thresholdDifference->GetOutput() ); // Second input is the mask
-    TRY_UPDATE( maskedOtsu );
-    DEBUG_WRITE_LABEL_IMAGE( maskedOtsu );
-
-    /* Extract largest the airway with the lungs */
-    if (args.bDebug) std::cout << "Extracting final largest connected component ... ";
-
-    typename ConnectedComponentType::Pointer connectedFinal = ConnectedComponentType::New();
-    typename RelabelComponentType::Pointer relabelFinal = RelabelComponentType::New();
-    typename FinalThresholdingFilterType::Pointer finalThreshold = FinalThresholdingFilterType::New();
-
-    connectedFinal->SetInput ( maskedOtsu->GetOutput());
-    relabelFinal->SetInput( connectedFinal->GetOutput() );
-    relabelFinal->SetNumberOfObjectsToPrint( 5 );
-    TRY_UPDATE( relabelFinal );
-
-    if (args.iComponent <= 0)
-    {
-      componentNumber = LabelIt<T>(relabelFinal->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
-      if ( componentNumber <= 0 ) componentNumber = LabelIt<T>(relabelFinal->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
-      //std::cout<<"Label found = "<<componentNumber<<std::endl;
-    }
-    else
-    {
-      componentNumber = args.iComponent;
-    }
-
-    finalThreshold->SetInput( relabelFinal->GetOutput() );
-    finalThreshold->SetLowerThreshold( componentNumber ); // object #1
-    finalThreshold->SetUpperThreshold( componentNumber ); // object #1
-    finalThreshold->SetInsideValue(1);
-    finalThreshold->SetOutsideValue(0);
-    TRY_UPDATE( finalThreshold );
-    DEBUG_WRITE_LABEL_IMAGE( finalThreshold );
-
-    /* Second part of the code : getting rid of lung automatically */
-
+    /***************************************************************/
+    /*
+     * Second part of the code : getting rid of lung automatically
+     */
+    /***************************************************************/
     TOrigin imageOrigin = originalImage->GetOrigin();
     TSpacing imageSpacing = originalImage->GetSpacing();
     TSize imageSize = originalImage->GetBufferedRegion().GetSize();
@@ -709,10 +666,11 @@ namespace AirwaySegmenter {
     ballY = -args.lowerSeed[1];
     ballZ = args.lowerSeed[2];
 
-    if (args.bDebug) std::cout << "(x, y, z): " << ballX  << " " << ballY  << " " << ballZ << ", Radius: " << args.lowerSeedRadius << std::endl;
+    if (args.bDebug) {
+      std::cout << "(x, y, z): " << ballX  << " " << ballY  << " " << ballZ << ", Radius: " << args.lowerSeedRadius << std::endl;
+    }
 
     /* Compute the cubic region around the ball */
-
     int ballRegion[6];
 
     ballRegion[0] = int(floor( ( ballX - args.lowerSeedRadius - imageOrigin[0] ) / imageSpacing[0] ));
@@ -730,8 +688,7 @@ namespace AirwaySegmenter {
     ballRegion[4] = ballRegion[4] < (imageSize[1]-1) ? ballRegion[4] : (imageSize[1]-1);
     ballRegion[5] = ballRegion[5] < (imageSize[2]-1) ? ballRegion[5] : (imageSize[2]-1);
 
-    if (args.bDebug)
-    {
+    if (args.bDebug) {
       std::cout << "Origin: "  << imageOrigin[0] << " " << imageOrigin[1] << " "  << imageOrigin[2] << std::endl;
       std::cout << "Spacing: " << imageSpacing[0] << " " << imageSpacing[1] << " " << imageSpacing[2] << std::endl;
       std::cout << "size: "    << imageSize[0] << " " << imageSize[1] << " " << imageSize[2] << std::endl;
@@ -755,23 +712,17 @@ namespace AirwaySegmenter {
     regionBranch.SetIndex( startBranch );
     imageBranch->SetRegions( regionBranch );
 
-    try
-    {
+    try {
       imageBranch->Allocate();
-    }
-    catch (itk::ExceptionObject & excep )
-    {
+    } catch (itk::ExceptionObject & excep ) {
       std::cerr << "Exception caught !" << std::endl;
       std::cerr << excep << std::endl;
       std::cerr << "Please verify your parameters, this is often caused by a misplaced trachea carina"<<std::endl;
     }
 
-    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ )
-    {
-      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ )
-      {
-        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ )
-        {
+    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ ) {
+      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ ) {
+        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ ) {
           double iX = iI * imageSpacing[0] + imageOrigin[0] - ballX;
           double iY = iJ * imageSpacing[1] + imageOrigin[1] - ballY;
           double iZ = iK * imageSpacing[2] + imageOrigin[2] - ballZ;
@@ -789,9 +740,9 @@ namespace AirwaySegmenter {
             pixelIndex[1] = iJ;
             pixelIndex[2] = iK;
 
-            if( finalThreshold->GetOutput()->GetPixel(pixelIndex) )
+            if( firstCombineThresholdFilter->GetOutput()->GetPixel(pixelIndex) )
             {
-              finalThreshold->GetOutput()->SetPixel(pixelIndex, 0);
+              firstCombineThresholdFilter->GetOutput()->SetPixel(pixelIndex, 0);
               imageBranch->SetPixel( pixelIndexBranch, 1 );
             }
           }
@@ -817,7 +768,6 @@ namespace AirwaySegmenter {
     /* Get geometry statistics */
     typedef itk::LabelGeometryImageFilter<LabelImageType> LabelGeometryImageFilterType;
     typename LabelGeometryImageFilterType::Pointer labelBranchGeometry = LabelGeometryImageFilterType::New();
-
     labelBranchGeometry->SetInput( relabelBranch->GetOutput() );
     labelBranchGeometry->CalculateOrientedBoundingBoxOn();
 
@@ -831,9 +781,10 @@ namespace AirwaySegmenter {
     int nBranchParts = relabelBranch->GetNumberOfObjects();
     int nBranchId = 1;
 
-    if( nBranchParts > 1 )
-    {
-      if (args.bDebug) std::cout << "Number of parts in branch: " << nBranchParts << std::endl;
+    if( nBranchParts > 1 ) {
+      if (args.bDebug) {
+        std::cout << "Number of parts in branch: " << nBranchParts << std::endl;
+      }
 
       double minDist2Ball;
       int minLabel;
@@ -841,24 +792,25 @@ namespace AirwaySegmenter {
       double dBallIndexY = ( ballRegion[4] - ballRegion[1] ) / 2.0;
       double dBallIndexZ = ( ballRegion[5] - ballRegion[2] ) / 2.0;
 
-      for( int nNumParts=1; nNumParts<=nBranchParts; nNumParts++ )
-      {
+      for( int nNumParts=1; nNumParts<=nBranchParts; nNumParts++ ) {
         typename LabelGeometryImageFilterType::BoundingBoxType boundingBox = labelBranchGeometry->GetBoundingBox( nNumParts );
         double xTmp = ( boundingBox[0] + boundingBox[1] ) / 2.0 - dBallIndexX;
         double yTmp = ( boundingBox[2] + boundingBox[3] ) / 2.0 - dBallIndexY;
         double zTmp = ( boundingBox[4] + boundingBox[5] ) / 2.0 - dBallIndexZ;
         double distTmp = sqrt( xTmp * xTmp + yTmp * yTmp + zTmp * zTmp );
 
-        if (args.bDebug) std::cout << "( " << xTmp << ", " << yTmp << ", " << zTmp << "), " << distTmp << std::endl;
+        if (args.bDebug) {
+          std::cout << "( " << xTmp << ", " << yTmp << ", " << zTmp << "), " << distTmp << std::endl;
+        }
 
-        if( nNumParts == 1 || minDist2Ball > distTmp)
-        {
+        if( nNumParts == 1 || minDist2Ball > distTmp) {
           minDist2Ball = distTmp;
           minLabel = nNumParts;
         }
 
-        if (args.bDebug) std::cout << boundingBox << std::endl;
-
+        if (args.bDebug) {
+          std::cout << boundingBox << std::endl;
+        }
       }
 
       nBranchId = minLabel;
@@ -867,7 +819,6 @@ namespace AirwaySegmenter {
     /* Get the biggest element (i.e. lung + airway) */
 
     typename FinalThresholdingFilterType::Pointer branchThreshold = FinalThresholdingFilterType::New();
-
     branchThreshold->SetInput( relabelBranch->GetOutput() );
     branchThreshold->SetLowerThreshold( nBranchId );
     branchThreshold->SetUpperThreshold( nBranchId );
@@ -878,23 +829,21 @@ namespace AirwaySegmenter {
 
     typename ConnectedComponentType::Pointer connectedFinalWithoutLung = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabelFinalWithoutLung = RelabelComponentType::New();
-
-    connectedFinalWithoutLung->SetInput( finalThreshold->GetOutput() );
+    connectedFinalWithoutLung->SetInput( firstCombineThresholdFilter->GetOutput() );
     relabelFinalWithoutLung->SetInput( connectedFinalWithoutLung->GetOutput() );
     relabelFinalWithoutLung->SetNumberOfObjectsToPrint( 5 );
     TRY_UPDATE( relabelFinalWithoutLung );
     DEBUG_WRITE_LABEL_IMAGE( relabelFinalWithoutLung );
 
     /* Clean up the ball region: Second pass */
-    if (args.bDebug) std::cout << "Get rid of residual lungs in the ball region ... " << std::endl;
+    if (args.bDebug) {
+      std::cout << "Get rid of residual lungs in the ball region ... " << std::endl;
+    }
 
     /* First get the original data in the lung+airway regions of the ball */
-    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ )
-    {
-      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ )
-      {
-        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ )
-        {
+    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ ) {
+      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ ) {
+        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ ) {
           double iX = iI * imageSpacing[0] + imageOrigin[0] - ballX;
           double iY = iJ * imageSpacing[1] + imageOrigin[1] - ballY;
           double iZ = iK * imageSpacing[2] + imageOrigin[2] - ballZ;
@@ -905,36 +854,35 @@ namespace AirwaySegmenter {
           pixelIndexBranch[2] = iK - ballRegion[2];
           imageBranch->SetPixel( pixelIndexBranch, -1024 );
 
-          if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius )
-          {
+          if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius ) {
             TIndex pixelIndex;
             pixelIndex[0] = iI;
             pixelIndex[1] = iJ;
             pixelIndex[2] = iK;
 
-            if( branchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) imageBranch->SetPixel( pixelIndexBranch, originalImage->GetPixel( pixelIndex ) );
+            if( branchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) {
+              imageBranch->SetPixel( pixelIndexBranch, originalImage->GetPixel( pixelIndex ) );
+            }
           }
         }
       }
     }
 
-    //Now apply an otsu threshold on it
+    // Now apply an Otsu threshold on it.
     typename OtsuThresholdFilterType::Pointer otsuThresholdBranchFilter = OtsuThresholdFilterType::New();
-
     otsuThresholdBranchFilter->SetInsideValue(1);
     otsuThresholdBranchFilter->SetOutsideValue(0);
     otsuThresholdBranchFilter->SetInput( imageBranch );
     TRY_UPDATE( otsuThresholdBranchFilter );
     DEBUG_WRITE_LABEL_IMAGE( otsuThresholdBranchFilter );
 
-    if (args.bDebug) std::cout << "Getting rid of the small lungs parts ... " << std::endl;
+    if (args.bDebug) {
+      std::cout << "Getting rid of the small lungs parts ... " << std::endl;
+    }
 
-    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ )
-    {
-      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ )
-      {
-        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ )
-        {
+    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ ) {
+      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ ) {
+        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ ) {
           double iX = iI * imageSpacing[0] + imageOrigin[0] - ballX;
           double iY = iJ * imageSpacing[1] + imageOrigin[1] - ballY;
           double iZ = iK * imageSpacing[2] + imageOrigin[2] - ballZ;
@@ -945,13 +893,15 @@ namespace AirwaySegmenter {
           pixelIndexBranch[2] = iK - ballRegion[2];
           imageBranch->SetPixel( pixelIndexBranch, 0 );
 
-          if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius )
-            if( branchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) && otsuThresholdBranchFilter->GetOutput()->GetPixel( pixelIndexBranch ) ) imageBranch->SetPixel( pixelIndexBranch, 1 );
+          if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius ) {
+            if( branchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) &&
+                otsuThresholdBranchFilter->GetOutput()->GetPixel( pixelIndexBranch ) ) {
+              imageBranch->SetPixel( pixelIndexBranch, 1 );
+            }
+          }
         }
       }
     }
-
-    DEBUG_WRITE_LABEL_IMAGE( relabelFinalWithoutLung );
 
     typename ConnectedComponentType::Pointer connectedCleanedBranch = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabelCleanedBranch = RelabelComponentType::New();
@@ -963,10 +913,9 @@ namespace AirwaySegmenter {
     relabelCleanedBranch->SetInput( connectedCleanedBranch->GetOutput() );
     relabelCleanedBranch->SetNumberOfObjectsToPrint( 5 );
     TRY_UPDATE( relabelCleanedBranch );
-    DEBUG_WRITE_LABEL_IMAGE( connectedCleanedBranch );
+    DEBUG_WRITE_LABEL_IMAGE( relabelCleanedBranch );
 
     typename FinalThresholdingFilterType::Pointer cleanedBranchThreshold = FinalThresholdingFilterType::New();
-
     cleanedBranchThreshold->SetInput( relabelCleanedBranch->GetOutput() );
     cleanedBranchThreshold->SetLowerThreshold( 1 );
     cleanedBranchThreshold->SetUpperThreshold( 1 );
@@ -975,39 +924,39 @@ namespace AirwaySegmenter {
     TRY_UPDATE( cleanedBranchThreshold );
     DEBUG_WRITE_LABEL_IMAGE( cleanedBranchThreshold );
 
-    if (args.bDebug) std::cout << "Final airway label ... " << std::endl;
+    if (args.bDebug) {
+      std::cout << "Final airway label ... " << std::endl;
+    }
 
     /* Find the airway label using the pyriform aperture */
-
     int nNumAirway = 0;
 
-    if (args.iComponent <= 0)
-    {
+    if (args.iComponent <= 0) {
       nNumAirway = LabelIt<T>(relabelFinalWithoutLung->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
-      if (nNumAirway <= 0 ) nNumAirway = LabelIt<T>(relabelFinalWithoutLung->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
-      std::cout<<"Label found = "<<nNumAirway<<std::endl;
-    }
-    else
-    {
+      if (nNumAirway <= 0 ) {
+        nNumAirway = LabelIt<T>(relabelFinalWithoutLung->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
+      }
+      std::cout << "Label found = " << nNumAirway << std::endl;
+    } else {
       nNumAirway = args.iComponent;
     }
 
-    /* Check if the maximum label found is 0,
-     * meaning that no label was found in the nose region
-     * => Nasal cavity probably not segmented !
-    */
+    // Check if the maximum label found is 0, meaning that no label was found in the
+    // nose region => Nasal cavity probably not segmented!
+    if (nNumAirway == 0) {
+      std::cerr << "WARNING !" << std::endl;
+      std::cerr << "The maximum label found in the spherical region around the pyriform aperture was zero !" << std::endl;
+      std::cerr << "This probably means that nasal cavity is not segmented (or the point is misplaced)." << std::endl;
+      std::cerr << " Advice: use --debug to ouput and check all the labels found and/or increase the upperSeedRadius to cover more space" << std::endl;
 
-    if (nNumAirway == 0)
-    {
-      std::cerr<<"WARNING !"<<std::endl;
-      std::cerr<<"The maximum label found in the spherical region around the pyriform aperture was zero !"<<std::endl;
-      std::cerr<<"This probably means that nasal cavity is not segmented (or the point is misplaced)."<<std::endl;
-      std::cerr<<" Advice: use --debug to ouput and check all the labels found and/or increase the upperSeedRadius to cover more space"<<std::endl;
-
-      if (args.bNoWarning) return EXIT_FAILURE;
+      if (args.bNoWarning) {
+        return EXIT_FAILURE;
+      }
     }
 
-    if (args.bDebug) std::cout << "The label " << nNumAirway << " is picked as the airway." << std::endl;
+    if (args.bDebug) {
+      std::cout << "The label " << nNumAirway << " is picked as the airway." << std::endl;
+    }
 
     typename FinalThresholdingFilterType::Pointer finalAirwayThreshold = FinalThresholdingFilterType::New();
     finalAirwayThreshold->SetInput( relabelFinalWithoutLung->GetOutput() );
@@ -1047,6 +996,7 @@ namespace AirwaySegmenter {
     finalFragmentCombineFilter->SetInput2( finalFragmentFilter->GetOutput() );
     TRY_UPDATE( finalFragmentCombineFilter );
     DEBUG_WRITE_LABEL_IMAGE( finalFragmentCombineFilter );
+    DEBUG_WRITE_LABEL_IMAGE( finalFragmentCombineFilter );
 
     typename FinalThresholdingFilterType::Pointer finalCombineThresholdFilter =
       FinalThresholdingFilterType::New();
@@ -1060,18 +1010,14 @@ namespace AirwaySegmenter {
     /* Finally paste the ball back */
     if (args.bDebug) std::cout << "Putting the branches back ... " << std::endl;
 
-    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ )
-    {
-      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ )
-      {
-        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ )
-        {
+    for( int iI=ballRegion[0]; iI<=ballRegion[3]; iI++ ) {
+      for( int iJ=ballRegion[1]; iJ<=ballRegion[4]; iJ++ ) {
+        for( int iK=ballRegion[2]; iK<=ballRegion[5]; iK++ ) {
           double iX = iI * imageSpacing[0] + imageOrigin[0] - ballX;
           double iY = iJ * imageSpacing[1] + imageOrigin[1] - ballY;
           double iZ = iK * imageSpacing[2] + imageOrigin[2] - ballZ;
 
-          if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius )
-          {
+          if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius ) {
             TIndex pixelIndex;
 
             pixelIndex[0] = iI;
@@ -1084,19 +1030,20 @@ namespace AirwaySegmenter {
             pixelIndexBranch[1] = iJ - ballRegion[1];
             pixelIndexBranch[2] = iK - ballRegion[2];
 
-            if( cleanedBranchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) finalCombineThresholdFilter->GetOutput()->SetPixel(pixelIndex, 1);
+            if( cleanedBranchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) {
+              finalCombineThresholdFilter->GetOutput()->SetPixel(pixelIndex, 1);
+            }
           }
         }
       }
     }
 
-
     typename LabelImageType::Pointer finalSegmentation = finalCombineThresholdFilter->GetOutput();
 
-    /* Optionally remove the maxillary sinus(es) */
-
-    if (args.bRemoveMaxillarySinuses)
-    {
+    // Optionally remove the maxillary sinus(es)
+    // NOTE!!! This has not been updated to support discontinuous airways
+    // (those with fragments).
+    if (args.bRemoveMaxillarySinuses) {
       std::cout << "maxillarySinusesSeeds "<<args.maxillarySinusesSeeds.size() << std::endl;
 
       /* First thing, Erode to severe the small connection
@@ -1104,9 +1051,7 @@ namespace AirwaySegmenter {
        * Note that the erosion is very small
        * Using custom fast marching function
        */
-
       typename ThresholdingFilterType::Pointer thresholdSlightErosion = ThresholdingFilterType::New();
-
       thresholdSlightErosion->SetLowerThreshold( args.dMaxAirwayRadius*args.erosionPercentage ); //Should be set ?
       thresholdSlightErosion->SetUpperThreshold( args.dMaxAirwayRadius );
       thresholdSlightErosion->SetOutsideValue( 0 );
@@ -1152,13 +1097,11 @@ namespace AirwaySegmenter {
 
       int airwayLabel = LabelIt<T>(relabelSinuses->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug); //Get the airway label
 
-      for (int i = 0; i < args.maxillarySinusesSeeds.size(); ++i) //For each seed
-      {
+      for (int i = 0; i < args.maxillarySinusesSeeds.size(); ++i) { //For each seed
         int seedLabel = LabelIt<T>(relabelSinuses->GetOutput(), args.maxillarySinusesSeeds[i], args.maxillarySinusesSeedsRadius, args.bDebug); //Get the label of the maxillary sinus
         //std::cout<<"Seed Label: "<<seedLabel<<std::endl;
 
-        if (airwayLabel == seedLabel) //The airway label MUST be different thant the seed label, Otherwise the airway would be maked out
-        {
+        if (airwayLabel == seedLabel) { //The airway label MUST be different than the seed label, Otherwise the airway would be masked out
           std::cerr <<"WARNING !"<<std::endl;
           std::cerr << "The airway label found is equal to the label found with seed #" << i << " (seed =" << args.maxillarySinusesSeeds[i][0] << ", " << args.maxillarySinusesSeeds[i][1]  << ", " << args.maxillarySinusesSeeds[i][2] << ")" << std::endl;
           std::cerr << "Review the seed position and/or the percentage used." << std::endl;
@@ -1175,7 +1118,6 @@ namespace AirwaySegmenter {
         addFilter->SetInput2( thresholdOut->GetOutput() );
         TRY_UPDATE( addFilter );
         DEBUG_WRITE_LABEL_IMAGE( addFilter );
-
 
         sinusesImage = addFilter->GetOutput();
       }
@@ -1229,11 +1171,15 @@ namespace AirwaySegmenter {
       finalSegmentation = thresholdCleanUp->GetOutput();
     }
 
-    if (args.bDebug) std::cout << "Writing the final image ... " << std::endl;
+    if (args.bDebug) {
+      std::cout << "Writing the final image ... " << std::endl;
+    }
 
     output = finalSegmentation;
 
-    if (args.bDebug) std::cout << "done." << std::endl;
+    if (args.bDebug) {
+      std::cout << "done." << std::endl;
+    }
 
     return EXIT_SUCCESS;
   }
