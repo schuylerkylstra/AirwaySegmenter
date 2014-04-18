@@ -991,7 +991,7 @@ namespace AirwaySegmenter {
             pixelIndexBranch[2] = iK - ballRegion[2];
 
             if( cleanedBranchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) ) {
-              relabelFinalWithoutLung->GetOutput()->SetPixel(pixelIndex, 1);
+              finalAirwayThreshold->GetOutput()->SetPixel(pixelIndex, 1);
             }
           }
         }
