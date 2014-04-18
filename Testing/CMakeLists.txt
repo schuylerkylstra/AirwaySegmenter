@@ -26,6 +26,7 @@ add_test( NAME SegmentationTest_1003
             --debugFolder "${TEST_OUTPUT_DIR}"
             --airwayFragmentSeeds 12.988,203.453,66.529
             --airwayFragmentSeeds 12.988,180.216,-18.903
+            --breathingMaskThickness 0
             --RAIImage
             --RAIImagePath "${TEST_OUTPUT_DIR}/1003_RAIImage.nrrd"
             "${TEST_DATA_DIR}/Input/1003.nrrd"

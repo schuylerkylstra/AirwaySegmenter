@@ -46,7 +46,8 @@
 #include <itkSubtractImageFilter.h>
 
 #include "itkAirwaySurfaceWriter.h"
-#include "itkMaskedOtsuThresholdImageFilter.h"
+#include "itkPhysicalSpaceBinaryDilateImageFilter.h"
+#include "itkPhysicalSpaceBinaryErodeImageFilter.h"
 
 #include "ProgramArguments.h"
 
@@ -330,7 +331,7 @@ namespace AirwaySegmenter {
 
     if (shouldConvert)
     {
-      typedef itk::IdentityTransform<double, DIMENSION> IdentityTransformType;
+      typedef itk::IdentityTransform< double, DIMENSION > IdentityTransformType;
 
       resampleFilter->SetTransform(IdentityTransformType::New());
       resampleFilter->SetInput(originalImage);
@@ -356,7 +357,6 @@ namespace AirwaySegmenter {
     /* Otsu thresholding first */
     typedef itk::OtsuThresholdImageFilter<InputImageType, LabelImageType > OtsuThresholdFilterType;
     typename OtsuThresholdFilterType::Pointer otsuThresholdFilter = OtsuThresholdFilterType::New();
-
     otsuThresholdFilter->SetInsideValue( 0 );
     otsuThresholdFilter->SetOutsideValue( 1 );
     otsuThresholdFilter->SetInput( originalImage );
@@ -366,23 +366,39 @@ namespace AirwaySegmenter {
     std::cout << "Initial Otsu threshold: " << otsuThresholdFilter->GetThreshold() << std::endl;
 
     /* Dilation */
-    typedef itk::BinaryThresholdImageFilter<FloatImageType, LabelImageType > ThresholdingFilterType;
-    typename ThresholdingFilterType::Pointer thresholdDilation = ThresholdingFilterType::New();
+    typedef itk::PhysicalSpaceBinaryDilateImageFilter< LabelImageType, LabelImageType >
+      DilateFilterType;
+    typedef itk::PhysicalSpaceBinaryErodeImageFilter< LabelImageType, LabelImageType >
+      ErodeFilterType;
 
-    thresholdDilation->SetLowerThreshold( 0.0 );
-    thresholdDilation->SetUpperThreshold( args.dMaxAirwayRadius );
-    thresholdDilation->SetOutsideValue( 0 );
-    thresholdDilation->SetInsideValue( 1 );
+    LabelImageType::Pointer initialBinaryImage;
+
+    if ( args.bRemoveBreathingMask ) {
+      // Initial erosion that removes narrow objects such as breathing masks
+      typename ErodeFilterType::Pointer thinErosion = ErodeFilterType::New();
+      thinErosion->SetErosionDistance( args.dBreathingMaskThickness );
+      thinErosion->SetInput( otsuThresholdFilter->GetOutput() );
+      TRY_UPDATE( thinErosion );
+      DEBUG_WRITE_LABEL_IMAGE( thinErosion );
+
+      typename DilateFilterType::Pointer airwayDilation = DilateFilterType::New();
+      airwayDilation->SetDilationDistance( args.dBreathingMaskThickness );
+      airwayDilation->SetInput( thinErosion->GetOutput() );
+      TRY_UPDATE( airwayDilation );
+      DEBUG_WRITE_LABEL_IMAGE( airwayDilation );
+
+      initialBinaryImage = airwayDilation->GetOutput();
+    } else {
+      initialBinaryImage = otsuThresholdFilter->GetOutput();
+    }
 
     /* Custom Fast marching */
-
     typedef itk::FastMarchingImageFilter<FloatImageType, FloatImageType>  FastMarchingFilterType;
-    typedef typename FastMarchingFilterType::NodeContainer  NodeContainer;
-    typedef typename FastMarchingFilterType::NodeType NodeType;
-    typedef itk::ImageRegionConstIterator<LabelImageType>  ConstIteratorType;
+    typedef typename FastMarchingFilterType::NodeContainer                NodeContainer;
+    typedef typename FastMarchingFilterType::NodeType                     NodeType;
+    typedef itk::ImageRegionConstIterator<LabelImageType>                 ConstIteratorType;
 
     /* Instantiations */
-
     typename FastMarchingFilterType::Pointer fastMarchingDilate = FastMarchingFilterType::New();
     typename NodeContainer::Pointer trialSeeds = NodeContainer::New();
     typename NodeContainer::Pointer aliveSeeds = NodeContainer::New();
@@ -395,8 +411,10 @@ namespace AirwaySegmenter {
     node.SetValue( 0.0 );
 
     /* Loop through the output image and set all voxels to 0 seed voxels */
-    ConstIteratorType binaryImageIterator( otsuThresholdFilter->GetOutput(),otsuThresholdFilter->GetOutput()->GetLargestPossibleRegion() );
-    ConstIteratorType imageIterator( originalImage,originalImage->GetLargestPossibleRegion() );
+    ConstIteratorType binaryImageIterator( initialBinaryImage,
+                                           initialBinaryImage->GetLargestPossibleRegion() );
+    ConstIteratorType imageIterator( originalImage,
+                                     originalImage->GetLargestPossibleRegion() );
 
     unsigned int uiNumberOfTrialSeeds = 0;
     unsigned int uiNumberOfAliveSeeds = 0;
@@ -404,22 +422,22 @@ namespace AirwaySegmenter {
 
     for ( binaryImageIterator.GoToBegin(); !binaryImageIterator.IsAtEnd(); ++binaryImageIterator )
     {
-      if ( binaryImageIterator.Get() > 0 )
-      {
+      if ( binaryImageIterator.Get() > 0 ) {
         node.SetIndex( binaryImageIterator.GetIndex() );
 
-        if (imageIterator.Get() > 60) aliveSeeds->InsertElement( uiNumberOfAliveSeeds++, node ); // Alive seed
+        if (imageIterator.Get() > 60) {
+          aliveSeeds->InsertElement( uiNumberOfAliveSeeds++, node ); // Alive seed
+        }
         else trialSeeds->InsertElement( uiNumberOfTrialSeeds++, node ); // Trial seed
       }
 
       ++imageIterator;
     }
 
-    if (args.bDebug)
-    {
-      std::cout<<std::endl<<std::endl;
-      std::cout<< "FastMarching Dilation: - Number of Alive Seeds: "<< aliveSeeds->Size() <<std::endl;
-      std::cout<< "             - Number of Trial Seeds: "<< trialSeeds->Size() <<std::endl;
+    if (args.bDebug) {
+      std::cout << std::endl << std::endl;
+      std::cout << "FastMarching Dilation: - Number of Alive Seeds: " << aliveSeeds->Size() << std::endl;
+      std::cout << "             - Number of Trial Seeds: " << trialSeeds->Size() << std::endl;
     }
 
     fastMarchingDilate->SetTrialPoints( trialSeeds ); //The set of seed nodes is now passed to the FastMarchingImageFilter with the method SetTrialPoints()
@@ -436,6 +454,12 @@ namespace AirwaySegmenter {
     TRY_UPDATE( fastMarchingDilate );
     DEBUG_WRITE_IMAGE( fastMarchingDilate );
 
+    typedef itk::BinaryThresholdImageFilter<FloatImageType, LabelImageType > ThresholdingFilterType;
+    typename ThresholdingFilterType::Pointer thresholdDilation = ThresholdingFilterType::New();
+    thresholdDilation->SetLowerThreshold( 0.0 );
+    thresholdDilation->SetUpperThreshold( args.dMaxAirwayRadius );
+    thresholdDilation->SetOutsideValue( 0 );
+    thresholdDilation->SetInsideValue( 1 );
     thresholdDilation->SetInput( fastMarchingDilate->GetOutput() );
     TRY_UPDATE( thresholdDilation );
     DEBUG_WRITE_LABEL_IMAGE( thresholdDilation );
@@ -461,21 +485,22 @@ namespace AirwaySegmenter {
     uiNumberOfAliveSeeds = 0;
     floatDilatedImageIterator.GoToBegin();
 
-    for ( binaryDilatedImageIterator.GoToBegin(); !binaryDilatedImageIterator.IsAtEnd(); ++binaryDilatedImageIterator )
-    {
-      if ( binaryDilatedImageIterator.Get() == 0 )
-      {
+    for ( binaryDilatedImageIterator.GoToBegin(); !binaryDilatedImageIterator.IsAtEnd(); ++binaryDilatedImageIterator ) {
+      if ( binaryDilatedImageIterator.Get() == 0 ) {
         node.SetIndex( binaryDilatedImageIterator.GetIndex() );
 
-        if (floatDilatedImageIterator.Get() > args.dMaxAirwayRadius + args.dErodeDistance) aliveSeeds->InsertElement( uiNumberOfAliveSeeds++, node ); // Alive seed
-        else trialSeeds->InsertElement( uiNumberOfTrialSeeds++, node ); // Trial seed
+        if (floatDilatedImageIterator.Get() > args.dMaxAirwayRadius + args.dErodeDistance) {
+          aliveSeeds->InsertElement( uiNumberOfAliveSeeds++, node ); // Alive seed
+        }
+        else {
+          trialSeeds->InsertElement( uiNumberOfTrialSeeds++, node ); // Trial seed
+        }
       }
 
       ++floatDilatedImageIterator;
     }
 
-    if (args.bDebug)
-    {
+    if (args.bDebug) {
       std::cout<<std::endl<<std::endl;
       std::cout<<"FastMarching Close:   - Number of Alive Seeds: "<<aliveSeeds->Size()<<" "<<uiNumberOfAliveSeeds << std::endl;
       std::cout<<"                      - Number of Trial Seeds: "<<trialSeeds->Size()<<" "<<uiNumberOfTrialSeeds << std::endl;
@@ -483,10 +508,8 @@ namespace AirwaySegmenter {
 
     fastMarchingClose->SetTrialPoints( trialSeeds ); // The set of seed nodes is now passed to the FastMarchingImageFilter with the method SetTrialPoints()
     fastMarchingClose->SetAlivePoints( aliveSeeds );
-
     fastMarchingClose->SetInput( NULL );
     fastMarchingClose->SetSpeedConstant( 1.0 );  // To solve a simple Eikonal equation
-
     fastMarchingClose->SetOutputSize( thresholdDilation->GetOutput()->GetBufferedRegion().GetSize() ); // The FastMarchingImageFilter requires the user to specify the size of the image to be produced as output. This is done using the SetOutputSize()
     fastMarchingClose->SetOutputRegion( thresholdDilation->GetOutput()->GetBufferedRegion() );
     fastMarchingClose->SetOutputSpacing( thresholdDilation->GetOutput()->GetSpacing() );

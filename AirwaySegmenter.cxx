@@ -116,6 +116,9 @@ int main( int argc, char * argv[] )
   args.upperSeed       = upperSeed;
   args.upperSeedRadius = upperSeedRadius;
 
+  args.bRemoveBreathingMask = bRemoveBreathingMask;
+  args.dBreathingMaskThickness = dBreathingMaskThickness;
+
   args.airwayFragmentSeeds = airwayFragmentSeeds;
 
   args.dMaxAirwayRadius             = dMaxAirwayRadius;

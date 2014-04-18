@@ -32,6 +32,9 @@ public:
   std::vector< float > upperSeed;
   double               upperSeedRadius;
 
+  bool   bRemoveBreathingMask;
+  double dBreathingMaskThickness;
+
   double dMaxAirwayRadius;
   double dErodeDistance;
   int    iComponent;

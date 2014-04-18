@@ -123,6 +123,22 @@
             <default>-1</default>
             <description><![CDATA[Use this to manualy choose the possible airway label. If the value is inferior to 0, it won't be used.]]></description>
         </integer>
+
+        <boolean>
+            <name>bRemoveBreathingMask</name>
+            <longflag>--removeBreathingMask</longflag>
+            <label>Remove breathing mask</label>
+            <default>False</default>
+            <description><![CDATA[Remove thin objects, such as breathing masks.]]></description>
+        </boolean>
+
+        <double>
+            <name>dBreathingMaskThickness</name>
+            <longflag>--breathingMaskThickness</longflag>
+            <label>Breathing mask thickness</label>
+            <default>3</default>
+            <description><![CDATA[Thickness of breathing mask.]]></description>
+        </double>
     </parameters>
 
     <parameters advanced="true">
