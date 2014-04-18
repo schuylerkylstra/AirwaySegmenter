@@ -22,6 +22,8 @@ add_test( NAME SegmentationTest_1003
             "${AIRWAY_SEGMENTER_LOCATION_RELEASE}"
             --lowerSeed 15.2148,163.774,-50.7766
             --upperSeed 34.5117,267.316,67.2616
+            --debug
+            --debugFolder "${TEST_OUTPUT_DIR}"
             --airwayFragmentSeeds 12.988,203.453,66.529
             --airwayFragmentSeeds 12.988,180.216,-18.903
             --RAIImage

@@ -633,15 +633,21 @@ namespace AirwaySegmenter {
     TRY_UPDATE( extendSegmentation );
     DEBUG_WRITE_LABEL_IMAGE( extendSegmentation );
 
-    typename OtsuThresholdFilterType::Pointer maskedOtsuThresholdFilter = OtsuThresholdFilterType::New();
+    /* Now do another Otsu thresholding but restrict the statistics to the currently obtained area  (custom ostu-threshold filter) */
+    typedef itk::MaskedOtsuThresholdImageFilter<InputImageType, LabelImageType, LabelImageType >MaskedOtsuThresholdFilterType;
+    typename MaskedOtsuThresholdFilterType::Pointer maskedOtsuThresholdFilter = MaskedOtsuThresholdFilterType::New();
     maskedOtsuThresholdFilter->SetInsideValue( 1 );
     maskedOtsuThresholdFilter->SetOutsideValue( 0 );
-    maskedOtsuThresholdFilter->SetMaskValue( 1 );
-    maskedOtsuThresholdFilter->MaskOutputOn();
     maskedOtsuThresholdFilter->SetMaskImage( extendSegmentation->GetOutput() );
     maskedOtsuThresholdFilter->SetInput( originalImage );
     TRY_UPDATE( maskedOtsuThresholdFilter );
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsuThresholdFilter );
+
+    typename TMaskImageFilter::Pointer maskedOtsu = TMaskImageFilter::New();
+    maskedOtsu->SetInput1( maskedOtsuThresholdFilter->GetOutput() );
+    maskedOtsu->SetInput2( thresholdDifference->GetOutput() ); // Second input is the  mask
+    TRY_UPDATE( maskedOtsu );
+    DEBUG_WRITE_LABEL_IMAGE( maskedOtsu );
 
     // Get the threshold used in the otsu-thresholding
     T dThreshold = maskedOtsuThresholdFilter->GetThreshold();
@@ -740,9 +746,9 @@ namespace AirwaySegmenter {
             pixelIndex[1] = iJ;
             pixelIndex[2] = iK;
 
-            if( firstCombineThresholdFilter->GetOutput()->GetPixel(pixelIndex) )
+            if( maskedOtsu->GetOutput()->GetPixel(pixelIndex) )
             {
-              firstCombineThresholdFilter->GetOutput()->SetPixel(pixelIndex, 0);
+              maskedOtsu->GetOutput()->SetPixel(pixelIndex, 0);
               imageBranch->SetPixel( pixelIndexBranch, 1 );
             }
           }
@@ -829,7 +835,7 @@ namespace AirwaySegmenter {
 
     typename ConnectedComponentType::Pointer connectedFinalWithoutLung = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabelFinalWithoutLung = RelabelComponentType::New();
-    connectedFinalWithoutLung->SetInput( firstCombineThresholdFilter->GetOutput() );
+    connectedFinalWithoutLung->SetInput( maskedOtsu->GetOutput() );
     relabelFinalWithoutLung->SetInput( connectedFinalWithoutLung->GetOutput() );
     relabelFinalWithoutLung->SetNumberOfObjectsToPrint( 5 );
     TRY_UPDATE( relabelFinalWithoutLung );

@@ -147,18 +147,21 @@ int main( int argc, char * argv[] )
 
     switch( inputComponentType )
     {
+#if 0
       case itk::ImageIOBase::UCHAR:
         std::cout<<"Unsigned char images not supported"<< std::endl;
         break;
       case itk::ImageIOBase::CHAR:
         std::cout<<"Char images not supported"<<std::endl;
         break;
+#endif
       case itk::ImageIOBase::USHORT:
         std::cout<<"Unsigned short images not supported"<<std::endl;
         break;
       case itk::ImageIOBase::SHORT:
         ret = AirwaySegmenter::ExecuteFromFile( args, static_cast<short>(0) );
         break;
+#if 0
       case itk::ImageIOBase::UINT:
         std::cout<<"Unsigned int images not supported"<<std::endl;
         break;
@@ -177,6 +180,7 @@ int main( int argc, char * argv[] )
       case itk::ImageIOBase::DOUBLE:
         std::cout<<"Double images not supported"<<std::endl;
         break;
+#endif
       case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
       default:
         std::cout << "unknown component type" << std::endl;
