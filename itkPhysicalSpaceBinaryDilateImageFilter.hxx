@@ -27,8 +27,6 @@
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkFastMarchingImageFilter.h>
 
-#include <itkImageFileWriter.h>
-
 namespace itk {
 
 template< typename TInputImage, typename TOutputImage >
@@ -157,16 +155,6 @@ PhysicalSpaceBinaryDilateImageFilter< TInputImage, TOutputImage >
       {
       itkExceptionMacro( << "Could not update the fast marching filter" );
       }
-
-    typedef itk::ImageFileWriter< FloatImageType > WriterType;
-    typename WriterType::Pointer writer = WriterType::New();
-    writer->SetInput( fastMarching->GetOutput() );
-    writer->SetFileName( "fastMarchingDilate-filter.nrrd" );
-    try {
-      writer->Update();
-    } catch ( itk::ExceptionObject & except ) {
-      std::cout << except << std::endl;
-    }
 
     typedef itk::BinaryThresholdImageFilter< FloatImageType, OutputImageType >
       ThresholdFilterType;
