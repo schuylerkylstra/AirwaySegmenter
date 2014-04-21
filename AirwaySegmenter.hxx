@@ -275,6 +275,7 @@ namespace AirwaySegmenter {
   int Execute( const ProgramArguments & args,
                TInput * originalImage,
                TOutput & output,
+               itk::SmartPointer< TInput > & resampledInput,
                typename TInput::PixelType & airwayThreshold )
   {
     /* Typedefs */
@@ -329,23 +330,83 @@ namespace AirwaySegmenter {
     typedef itk::ResampleImageFilter<InputImageType, InputImageType> ResampleImageFilterType;
     typename ResampleImageFilterType::Pointer resampleFilter = ResampleImageFilterType::New();
 
-    if (shouldConvert)
-    {
+    if ( shouldConvert ) {
       typedef itk::IdentityTransform< double, DIMENSION > IdentityTransformType;
 
-      resampleFilter->SetTransform(IdentityTransformType::New());
-      resampleFilter->SetInput(originalImage);
-      resampleFilter->SetSize(originalImage->GetLargestPossibleRegion().GetSize());
-      resampleFilter->SetOutputOrigin(originalImage->GetOrigin());
-      resampleFilter->SetOutputSpacing(originalImage->GetSpacing());
+      // Figure out bounding box of rotated image
+      double boundingBox[6] = { DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX, DBL_MAX, -DBL_MAX };
+      typedef typename InputImageType::IndexType  IndexType;
+      typedef typename InputImageType::RegionType RegionType;
+      typedef typename InputImageType::PointType  PointType;
+
+      RegionType region = originalImage->GetLargestPossibleRegion();
+      IndexType lowerUpper[2];
+      lowerUpper[0] = region.GetIndex();
+      lowerUpper[1] = region.GetUpperIndex();
+
+      for ( unsigned int i = 0; i < 8; ++i ) {
+        IndexType cornerIndex;
+        cornerIndex[0] = lowerUpper[ (i & 1u) >> 0 ][0];
+        cornerIndex[1] = lowerUpper[ (i & 2u) >> 1 ][1];
+        cornerIndex[2] = lowerUpper[ (i & 4u) >> 2 ][2];
+        std::cout << "cornerIndex: " << cornerIndex << std::endl;
+
+        PointType point;
+        originalImage->TransformIndexToPhysicalPoint( cornerIndex, point );
+        boundingBox[0] = std::min( point[0], boundingBox[0] );
+        boundingBox[1] = std::max( point[0], boundingBox[1] );
+        boundingBox[2] = std::min( point[1], boundingBox[2] );
+        boundingBox[3] = std::max( point[1], boundingBox[3] );
+        boundingBox[4] = std::min( point[2], boundingBox[4] );
+        boundingBox[5] = std::max( point[2], boundingBox[5] );
+      }
+
+      // Now transform the bounding box from physical space to index space
+      PointType lowerPoint;
+      lowerPoint[0] = boundingBox[0];
+      lowerPoint[1] = boundingBox[2];
+      lowerPoint[2] = boundingBox[4];
+
+      PointType upperPoint;
+      upperPoint[0] = boundingBox[1];
+      upperPoint[1] = boundingBox[3];
+      upperPoint[2] = boundingBox[5];
+
+      InputImageType::Pointer dummyImage = InputImageType::New();
+      dummyImage->SetOrigin( lowerPoint );
+      dummyImage->SetSpacing( originalImage->GetSpacing() );
+      dummyImage->SetLargestPossibleRegion( RegionType() );
+
+      IndexType newLower, newUpper;
+      dummyImage->TransformPhysicalPointToIndex( lowerPoint, newLower );
+      dummyImage->TransformPhysicalPointToIndex( upperPoint, newUpper );
+
+      RegionType outputRegion;
+      outputRegion.SetIndex( newLower );
+      outputRegion.SetUpperIndex( newUpper );
+
+      // Find the minimum pixel value in the image. This will be used as the default value
+      // in the resample filter.
+      typedef itk::MinimumMaximumImageCalculator< InputImageType > MinMaxType;
+      typename MinMaxType::Pointer minMaxCalculator = MinMaxType::New();
+      minMaxCalculator->SetImage( originalImage );
+      minMaxCalculator->Compute();
+
+      resampleFilter->SetTransform( IdentityTransformType::New() );
+      resampleFilter->SetInput( originalImage );
+      resampleFilter->SetSize( outputRegion.GetSize() );
+      resampleFilter->SetOutputOrigin( lowerPoint );
+      resampleFilter->SetOutputSpacing( originalImage->GetSpacing() );
+      resampleFilter->SetDefaultPixelValue( minMaxCalculator->GetMinimum() );
       TRY_UPDATE( resampleFilter );
       DEBUG_WRITE_LABEL_IMAGE( resampleFilter );
 
       originalImage = resampleFilter->GetOutput();
     }
 
-    /* Write RAI Image if asked to */
+    resampledInput = originalImage;
 
+    /* Write RAI Image if asked to */
     if (args.bRAIImage)
     {
       typename WriterType::Pointer writer = WriterType::New();
@@ -1238,9 +1299,11 @@ namespace AirwaySegmenter {
 
     // Run the algorithm
     typename OutputImageType::Pointer algorithmOutput;
+    typename InputImageType::Pointer resampledInput;
     typename InputImageType::PixelType airwayThreshold;
     int result = Execute( args, reader->GetOutput(),
-                          algorithmOutput, airwayThreshold );
+                          algorithmOutput, resampledInput,
+                          airwayThreshold );
     if ( result != EXIT_SUCCESS ) {
       return result;
     }
@@ -1261,7 +1324,7 @@ namespace AirwaySegmenter {
       surfaceWriter->SetFileName( args.outputGeometry.c_str() );
       surfaceWriter->SetUseFastMarching( true );
       surfaceWriter->SetMaskImage( algorithmOutput );
-      surfaceWriter->SetInput( reader->GetOutput() );
+      surfaceWriter->SetInput( resampledInput );
       surfaceWriter->SetThreshold( airwayThreshold );
       TRY_UPDATE( surfaceWriter );
     }
