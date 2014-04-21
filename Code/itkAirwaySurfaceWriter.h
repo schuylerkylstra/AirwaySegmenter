@@ -107,14 +107,14 @@ private:
   typename TMaskImage::ConstPointer   m_pMaskImage;
   std::string                         m_FileName;
   bool                                m_UseFastMarching;
-  InputPixelType 				  	  m_dThreshold;
+  InputPixelType 				  	          m_dThreshold;
 
 }; // end of class
 
 }//end namespace itk
   
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkAirwaySurfaceWriter.txx"
+#include "itkAirwaySurfaceWriter.hxx"
 #endif
 
 #endif

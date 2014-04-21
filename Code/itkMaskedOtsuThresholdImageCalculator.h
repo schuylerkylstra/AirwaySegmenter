@@ -110,7 +110,7 @@ private:
 
 
 #ifndef ITK_MANUAL_INSTANTIATION
-#include "itkMaskedOtsuThresholdImageCalculator.txx"
+#include "itkMaskedOtsuThresholdImageCalculator.hxx"
 #endif
 
 #endif
