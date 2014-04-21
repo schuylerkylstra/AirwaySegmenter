@@ -74,30 +74,30 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
     //Fast marching for dilatation on the segemented image
     //Necessaries typedefs
     typedef itk::FastMarchingImageFilter< TFloatImage, TFloatImage >  FastMarchingFilterType;
-    typedef FastMarchingFilterType::NodeContainer  NodeContainer; 
-    typedef FastMarchingFilterType::NodeType NodeType; 
-    typedef itk::ImageRegionConstIterator< TMaskImage > ConstIteratorType; 
-    
+    typedef FastMarchingFilterType::NodeContainer                     NodeContainer;
+    typedef FastMarchingFilterType::NodeType                          NodeType;
+    typedef itk::ImageRegionConstIterator< TMaskImage >               ConstIteratorType;
+
     //Instantiations
     typename FastMarchingFilterType::Pointer fastMarching = FastMarchingFilterType::New();
     typename NodeContainer::Pointer seeds = NodeContainer::New();
     seeds->Initialize();
 
-    //Nodes are created as stack variables and 
+    //Nodes are created as stack variables and
     //initialized with a value and an itk::Index position. NodeType node;
     NodeType node;
 
     //WATCHOUT ! Here we want to expand the trachea !!!!!
-    node.SetValue( 0.0 ); 
-    
-    // loop through the output image 
+    node.SetValue( 0.0 );
+
+    // loop through the output image
     // and set all voxels to 0 seed voxels
     ConstIteratorType it( this->m_pMaskImage,
                           this->m_pMaskImage->GetLargestPossibleRegion() );
 
 
     unsigned int uiNumberOfSeeds = 0;
-    for ( it.GoToBegin(); !it.IsAtEnd(); ++it ) 
+    for ( it.GoToBegin(); !it.IsAtEnd(); ++it )
       {
       if ( it.Get() > 0 )
         {
@@ -111,9 +111,9 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
     // FastMarchingImageFilter with the method SetTrialPoints().
     fastMarching->SetTrialPoints( seeds );
 
-    // The FastMarchingImageFilter requires the user to specify 
+    // The FastMarchingImageFilter requires the user to specify
     //the size of the image to be produced as output.
-    //This is done using the SetOutputSize(). 
+    //This is done using the SetOutputSize().
 
     fastMarching->SetInput( NULL );
     fastMarching->SetSpeedConstant( 1.0 );  // to solve a simple Eikonal equation
@@ -131,13 +131,13 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
       ThresholdingFilterType;
     typename ThresholdingFilterType::Pointer thresholdDilation = ThresholdingFilterType::New();
 
-    thresholdDilation->SetLowerThreshold( 0.0 ); 
+    thresholdDilation->SetLowerThreshold( 0.0 );
     thresholdDilation->SetUpperThreshold( 1.0 );
-    thresholdDilation->SetOutsideValue( 0.0 ); 
+    thresholdDilation->SetOutsideValue( 0.0 );
     thresholdDilation->SetInsideValue( 1.0 );
     thresholdDilation->SetInput( fastMarching->GetOutput() );
     thresholdDilation->Update();
-  
+
 //    maskFilter->SetMaskImage(thresholdDilation->GetOutput());
 
     // upsample the binary image
@@ -174,27 +174,27 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
     maskFilter->SetMaskImage( thresholdFilter->GetOutput() );
 
     /*{
-	typedef itk::ImageFileWriter<TFloatImage> WriterLabelType;
-    	typename WriterLabelType::Pointer writerSample = WriterLabelType::New();
-    	writerSample->SetInput( resampleBinaryFilter->GetOutput() );
-    	std::string filename = "/playpen/Project/airwayAtlas/AirwaySegmenterInSlicer";
-    	filename += "/upsample_binary.nhdr";
-    	writerSample->SetFileName( filename );
+  typedef itk::ImageFileWriter<TFloatImage> WriterLabelType;
+      typename WriterLabelType::Pointer writerSample = WriterLabelType::New();
+      writerSample->SetInput( resampleBinaryFilter->GetOutput() );
+      std::string filename = "";
+      filename += "/upsample_binary.nhdr";
+      writerSample->SetFileName( filename );
 
-    	try
-      	{
-      		writerSample->Update();
-      	}
-    	catch ( itk::ExceptionObject & excep )
-      	{
-      	std::cerr << "Exception caught !" << std::endl; std::cerr << excep << std::endl;
-     	}
+      try
+        {
+          writerSample->Update();
+        }
+      catch ( itk::ExceptionObject & excep )
+        {
+        std::cerr << "Exception caught !" << std::endl; std::cerr << excep << std::endl;
+      }
     }*/
 
     }
   else
     {
-    typedef itk::BinaryBallStructuringElement<float, 3> 
+    typedef itk::BinaryBallStructuringElement<float, 3>
       TStructuringElement;
     TStructuringElement structuringElement;
     structuringElement.SetRadius(1);
@@ -285,14 +285,14 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
   //
   //Masking
   //
-  
+
   //maskFilter->SetInput(this->GetInput());
   maskFilter->SetInput(resampleOriginalFilter->GetOutput());
   maskFilter->SetOutsideValue(std::numeric_limits<InputPixelType>::max());
   maskFilter->Update();
 
   /*
-  // Upsampling 
+  // Upsampling
   typedef itk::ResampleImageFilter<TInputImage, TInputImage> resampleFilterType;
   typename resampleFilterType::Pointer resampleFilter = resampleFilterType::New();
   resampleFilter->SetInput( maskFilter->GetOutput() );
@@ -302,10 +302,10 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
   InputSizeType outputSize = maskFilter->GetOutput()->GetLargestPossibleRegion().GetSize();
   InputSpacingType outputSpacing = maskFilter->GetOutput()->GetSpacing();
   for( int iI = 0; iI < 3; iI++ )
-  {
-	outputSize[iI] *= 2;
-	outputSpacing[iI] /= 2;
-  }
+    {
+    outputSize[iI] *= 2;
+    outputSpacing[iI] /= 2;
+    }
   resampleFilter->SetSize( outputSize );
   resampleFilter->SetOutputSpacing( outputSpacing );
 
@@ -318,7 +318,7 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
   resampleFilter->SetInterpolator( interpolator );
 
   resampleFilter->Update();
-  
+
   //if (bDebug)
   //  {
     typedef itk::ImageFileWriter<TInputImage> WriterLabelType;
@@ -334,7 +334,7 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
       }
     catch ( itk::ExceptionObject & excep )
       {
-      std::cerr << "Exception caught !" << std::endl; std::cerr << excep << std::endl; 
+      std::cerr << "Exception caught !" << std::endl; std::cerr << excep << std::endl;
       }
     //}
    */
@@ -342,7 +342,7 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
   //
   //Contour
   //
-  
+
   //Conversion to VTK
   typedef itk::ImageToVTKImageFilter<TInputImage> adaptatorFromITKtoVTKType;
   typename adaptatorFromITKtoVTKType::Pointer toVTKFilter = adaptatorFromITKtoVTKType::New();
@@ -356,32 +356,35 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
   contourFilter->SetValue(0, this->m_dThreshold);
   contourFilter->Update();
 
+  /*
   // Get the largest connectivity
   vtkSmartPointer<vtkPolyDataConnectivityFilter> connectivityFilter = vtkPolyDataConnectivityFilter::New();
   connectivityFilter->SetInputConnection(contourFilter->GetOutputPort());
   connectivityFilter->SetExtractionModeToLargestRegion();
   connectivityFilter->Update();
-  
+  */
+
   /*
   // smooth meshes
   vtkSmartPointer<vtkSmoothPolyDataFilter> smoothFilter = vtkSmoothPolyDataFilter::New();
   smoothFilter->SetInputConnection(connectivityFilter->GetOutputPort());
   smoothFilter->SetNumberOfIterations(100);
   smoothFilter->Update();
-  */  
+  */
 
-  //Transform it to IJK (i.e. pixel space) 
+  //Transform it to IJK (i.e. pixel space)
   // <-> equivalent to a rotation of 180 degrees around the Z axis
   vtkSmartPointer<vtkTransform> transform = vtkTransform::New();
   transform->RotateZ(180.0);
-  
-  vtkSmartPointer<vtkTransformPolyDataFilter> transformer = 
+
+  vtkSmartPointer<vtkTransformPolyDataFilter> transformer =
     vtkTransformPolyDataFilter::New();
-  transformer->SetInputConnection(connectivityFilter->GetOutputPort());
+  //transformer->SetInputConnection(connectivityFilter->GetOutputPort());
   //transformer->SetInputConnection(smoothFilter->GetOutputPort());
+  transformer->SetInputConnection(contourFilter->GetOutputPort());
   transformer->SetTransform(transform);
   transformer->Update();
-  
+
   //Write to file
   vtkSmartPointer<vtkXMLPolyDataWriter> writer = vtkXMLPolyDataWriter::New();
   writer->SetFileName(this->m_FileName.c_str());
@@ -392,7 +395,7 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
 }
 
 template<class TInputImage, class TMaskImage>
-void 
+void
 AirwaySurfaceWriter<TInputImage, TMaskImage>
 ::PrintSelf(std::ostream& os, Indent indent) const
 {
