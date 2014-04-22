@@ -13,12 +13,23 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol
+//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen
 =============================================================================*/
 
 #ifndef AirwaySegmenterConfig_H
 #define AirwaySegmenterConfig_H
 
 #cmakedefine SLICER_ITK_DIFFERENT
+
+#cmakedefine SUPPORT_UCHAR_PIXEL
+#cmakedefine SUPPORT_CHAR_PIXEL
+#cmakedefine SUPPORT_USHORT_PIXEL
+#cmakedefine SUPPORT_SHORT_PIXEL
+#cmakedefine SUPPORT_UINT_PIXEL
+#cmakedefine SUPPORT_INT_PIXEL
+#cmakedefine SUPPORT_ULONG_PIXEL
+#cmakedefine SUPPORT_LONG_PIXEL
+#cmakedefine SUPPORT_FLOAT_PIXEL
+#cmakedefine SUPPORT_DOUBLE_PIXEL
 
 #endif // AirwaySegmenterConfig_H
