@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <executable>
     <category>Segmentation</category>
-    <title>Airway segmentation</title>
-    <description><![CDATA[Semi-automatically extracts the airway from a CT image.]]></description>
+    <title>Airway Segmentation</title>
+    <description><![CDATA[Semi-automatically extracts the upper airway from a CT image.]]></description>
     <version>1.0</version>
     <documentation-url>TO DO !!!!!</documentation-url>
     <license></license>
-    <contributor>Marc Niethammer, Yi Hong, Johan Andruejol</contributor>
+    <contributor>Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen</contributor>
     <acknowledgements><![CDATA[TO DO !!!!!!]]></acknowledgements>
 
     <parameters>
@@ -42,7 +42,7 @@
 
     <parameters>
         <label>Segmentation Seeds</label>
-        <description><![CDATA[Used for automatically leave the
+        <description><![CDATA[Used to automatically leave the
         lungs out of the segmentation.]]>
         </description>
 
@@ -50,7 +50,7 @@
             <name>lowerSeed</name>
             <label>Lower Seed</label>
             <longflag>--lowerSeed</longflag>
-            <description><![CDATA[Usualy placed at the carina of the trachea, this point is the center of the sphere that helps cutting the lungs apart from the airway.]]>.</description>
+            <description><![CDATA[Usually placed at the carina of the trachea, this point is the center of the sphere that helps cut the lungs apart from the airway.]]>.</description>
             <default>0,0,0</default>
         </point>
         <double>
@@ -67,7 +67,7 @@
             <name>upperSeed</name>
             <label>Upper Seed</label>
             <longflag>--upperSeed</longflag>
-            <description><![CDATA[Point placed whithin the airway. It should be placed in the broadest airway region in order to help to identify it.]]></description>
+            <description><![CDATA[Point placed within the airway. It should be placed in the broadest airway region to help to identify it.]]></description>
             <default>0,0,0</default>
         </point>
         <double>
@@ -83,8 +83,7 @@
 
     <parameters>
       <label>Airway Fragment Seeds</label>
-      <description><![CDATA[Used to mark disconnected airway fragments that should be
-      included in the segmentation.]]>
+      <description><![CDATA[Used to mark disconnected airway fragments that should be included in the segmentation.]]>
       </description>
 
       <point multiple="true" coordinateSystem="ras">
@@ -98,14 +97,14 @@
 
     <parameters advanced="true">
         <label>Advanced Algorithm Settings</label>
-        <description><![CDATA[Advanced algorithm settings. Default should be good enough for most purposes]]></description>
+        <description><![CDATA[Advanced algorithm settings. Defaults should be good enough for most purposes.]]></description>
 
         <double>
             <name>dMaxAirwayRadius</name>
             <longflag>--maxAirwayRadius</longflag>
             <label>Airway maximum radius</label>
             <default>9</default>
-            <description><![CDATA[Maximal radius for morphological closing (in mm). Should be set roughly a little larger than the maximal expected radius for the airway.]]></description>
+            <description><![CDATA[Maximal radius for morphological closing (in mm). Should be set roughly a little larger than the maximum expected radius of the airway.]]></description>
         </double>
 
         <double>
@@ -121,7 +120,7 @@
             <longflag>--component</longflag>
             <label>Airway manual label</label>
             <default>-1</default>
-            <description><![CDATA[Use this to manualy choose the possible airway label. If the value is inferior to 0, it won't be used.]]></description>
+            <description><![CDATA[Use this to manually choose the possible airway label. If the value is less than 0, it won't be used.]]></description>
         </integer>
 
         <boolean>
@@ -129,7 +128,7 @@
             <longflag>--removeBreathingMask</longflag>
             <label>Remove breathing mask</label>
             <default>False</default>
-            <description><![CDATA[Remove thin objects, such as breathing masks.]]></description>
+            <description><![CDATA[Remove thin objects, such as breathing masks. WARNING: Enabling this option may remove thin structures in the sinus region.]]></description>
         </boolean>
 
         <double>
@@ -137,7 +136,7 @@
             <longflag>--breathingMaskThickness</longflag>
             <label>Breathing mask thickness</label>
             <default>3</default>
-            <description><![CDATA[Thickness of breathing mask.]]></description>
+            <description><![CDATA[Thickness of breathing mask or other thin structures to remove.]]></description>
         </double>
     </parameters>
 
@@ -155,7 +154,7 @@
             <name>maxillarySinusesSeeds</name>
             <label>Maxillary Sinuses Seeds</label>
             <longflag>--maxillarySinusesSeed</longflag>
-            <description><![CDATA[Point placed whithin the maxillary sinuses.]]></description>
+            <description><![CDATA[Seed points placed whithin the maxillary sinuses.]]></description>
             <default>None</default>
         </point>
         <double>
@@ -177,7 +176,7 @@
               <maximum>1</maximum>
               <step>.01</step>
             </constraints>
-            <description><![CDATA[The percentage of the erode distance used during removal of the maxillary sinuses.]]></description>
+            <description><![CDATA[The percentage of the erodeDistance parameter used during removal of the maxillary sinuses.]]></description>
         </double>
     </parameters>
 
@@ -190,7 +189,7 @@
             <longflag>--noWarning</longflag>
             <label>Break on warning</label>
             <default>true</default>
-            <description><![CDATA[Choose whether or not the execution stop if a warning is found.]]></description>
+            <description><![CDATA[Choose whether or not to stop executing if a warning is found.]]></description>
         </boolean>
 
         <boolean>
@@ -198,7 +197,7 @@
             <longflag>--debug</longflag>
             <label>Output debug informations</label>
             <default>false</default>
-            <description><![CDATA[Choose whether or not to output the debug informations and images.]]></description>
+            <description><![CDATA[Choose whether to output the debug information and images.]]></description>
         </boolean>
 
         <string>
@@ -206,20 +205,20 @@
             <longflag>--debugFolder</longflag>
             <label>Destination folder for debug images</label>
             <default>None</default>
-            <description><![CDATA[Used only if Debug on. Choose the destination folder of the images.]]></description>
+            <description><![CDATA[Used only if Debug on. Choose the destination folder of the output debug images.]]></description>
         </string>
     </parameters>
 
     <parameters advanced="true">
         <label>Optional Output</label>
-        <description><![CDATA[Optional output. Those output will not be loaded automatically in Slicer]]></description>
+        <description><![CDATA[Optional output. These outputs will not be loaded automatically in Slicer]]></description>
 
         <boolean>
             <name>bRAIImage</name>
             <longflag>--RAIImage</longflag>
             <label>Write RAI image</label>
             <default>false</default>
-            <description><![CDATA[Output the image in RAI coordinates. If the input image is not in RAI coordinates, then it will be resampled.]]></description>
+            <description><![CDATA[Output the image in RAI coordinates. If the input image is not in RAI coordinates, then it will be resampled. This output is the resampled image.]]></description>
         </boolean>
 
         <string>
@@ -227,7 +226,7 @@
             <longflag>--RAIImagePath</longflag>
             <label>Destination folder for RAI image</label>
             <default>None</default>
-            <description><![CDATA[Used only if "Write RAI image" is on. Choose the output path of the RAI image.]]></description>
+            <description><![CDATA[Used only if "Write RAI image" is on. Choose the output path of the RAI image: note that a file name is required at the end of the path.]]></description>
         </string>
     </parameters>
 

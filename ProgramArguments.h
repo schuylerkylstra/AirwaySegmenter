@@ -13,7 +13,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol
+//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen
 =============================================================================*/
 
 #ifndef AirwaySegmenter_ProgramArguments_h_included
@@ -21,6 +21,10 @@
 
 namespace AirwaySegmenter {
 
+/** Simple container class for holding program arguments.
+ *
+ * For information about what each member is, please see
+ * AirwaySegmenter.xml */
 class ProgramArguments {
 public:
   std::string inputImage;
