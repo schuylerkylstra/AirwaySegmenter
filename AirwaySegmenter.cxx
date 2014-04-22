@@ -13,22 +13,19 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol
+//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen
 =============================================================================*/
 
 /* STL includes */
-
 #include <cmath>
+#include <ctime>
 #include <iostream>
 #include <limits>
 #include <map>
 #include <string>
-#include <time.h>
 #include <vector>
 
-
 /* Local includes */
-
 #include "AirwaySegmenterCLP.h"
 #include "AirwaySegmenterConfig.h"
 #include "AirwaySegmenter.hxx"

@@ -13,14 +13,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol
+//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen
 =============================================================================*/
 
 #ifndef __itkMaskedOtsuThresholdImageCalculator_h
 #define __itkMaskedOtsuThresholdImageCalculator_h
 
 #include "itkObject.h"
-#include "itkObjectFactory.h"
 #include "itkNumericTraits.h"
 
 namespace itk

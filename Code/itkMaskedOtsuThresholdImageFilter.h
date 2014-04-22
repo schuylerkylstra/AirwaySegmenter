@@ -13,14 +13,13 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol
+//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen
 =============================================================================*/
 
 #ifndef __itkMaskedOtsuThresholdImageFilter_h
 #define __itkMaskedOtsuThresholdImageFilter_h
 
 #include "itkImageToImageFilter.h"
-#include "itkFixedArray.h"
 
 namespace itk {
 

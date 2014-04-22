@@ -25,23 +25,25 @@
 #include <itkBinaryBallStructuringElement.h>
 #include <itkBinaryThresholdImageFilter.h>
 #include <itkFastMarchingImageFilter.h>
-#include <itkMaskImageFilter.h>
-#include <itkOtsuThresholdImageFilter.h>
 #include <itkImageRegionConstIterator.h>
 #include <itkImageToVTKImageFilter.h>
+#include <itkMaskImageFilter.h>
+#include <itkOtsuThresholdImageFilter.h>
 #include <itkVTKImageToImageFilter.h>
-#include <vtkContourFilter.h>
-#include <vtkSmartPointer.h>
-#include <vtkImageData.h>
-#include <vtkXMLPolyDataWriter.h>
-#include <vtkTransform.h>
-#include <vtkTransformPolyDataFilter.h>
-#include <itkResampleImageFilter.h>
+
+
 #include <itkBSplineInterpolateImageFunction.h>
+#include <vtkContourFilter.h>
+#include <vtkImageData.h>
+#include <itkResampleImageFilter.h>
 #include <itkIdentityTransform.h>
 #include <itkImageFileWriter.h>
-#include <vtkSmoothPolyDataFilter.h>
 #include <vtkPolyDataConnectivityFilter.h>
+#include <vtkSmartPointer.h>
+#include <vtkSmoothPolyDataFilter.h>
+#include <vtkTransform.h>
+#include <vtkTransformPolyDataFilter.h>
+#include <vtkXMLPolyDataWriter.h>
 
 namespace itk {
 

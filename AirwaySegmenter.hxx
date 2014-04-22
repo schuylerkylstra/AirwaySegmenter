@@ -13,7 +13,7 @@
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 //
-//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol
+//  Authors: Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen
 =============================================================================*/
 #ifndef AirwaySegmenter_hxx_included
 #define AirwaySegmenter_hxx_included
@@ -22,7 +22,6 @@
 #include <itkAbsoluteValueDifferenceImageFilter.h>
 #include <itkAddImageFilter.h>
 #include <itkBinaryThresholdImageFilter.h>
-#include <itkCastImageFilter.h>
 #include <itkConnectedComponentImageFilter.h>
 #include <itkConnectedThresholdImageFilter.h>
 #include <itkImageDuplicator.h>
@@ -31,19 +30,14 @@
 #include <itkImageFileReader.h>
 #include <itkImageFileWriter.h>
 #include <itkImageRegionConstIterator.h>
-#include <itkImageSliceConstIteratorWithIndex.h>
-#include <itkImageSliceIteratorWithIndex.h>
 #include <itkIdentityTransform.h>
 #include <itkLabelGeometryImageFilter.h>
 #include <itkMaskImageFilter.h>
-#include <itkMatrix.h>
-#include <itkMultiplyImageFilter.h>
 #include <itkOtsuThresholdImageFilter.h>
 #include <itkRelabelComponentImageFilter.h>
 #include <itkResampleImageFilter.h>
 #include <itkSmartPointer.h>
 #include <itkSpatialOrientationAdapter.h>
-#include <itkSubtractImageFilter.h>
 
 #include "itkAirwaySurfaceWriter.h"
 #include "itkPhysicalSpaceBinaryDilateImageFilter.h"

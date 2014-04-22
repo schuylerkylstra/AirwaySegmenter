@@ -20,6 +20,7 @@
 #define __itkAirwaySurfaceWriter_h
 
 #include "itkImageToImageFilter.h"
+
 #include <string>
 
 namespace itk
