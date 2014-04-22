@@ -50,21 +50,37 @@ namespace
     std::cout << "output image                 = " << outputImage << std::endl;
     std::cout << "output geometry              = " << outputGeometry << std::endl;
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
-    std::cout << "lowerSeed                    = " << lowerSeed[0] << ", " << lowerSeed[1] << ", " << lowerSeed[2] << std::endl;
+    std::cout << "lowerSeed                    = " << lowerSeed[0] << ", "
+                                                   << lowerSeed[1] << ", "
+                                                   << lowerSeed[2] << std::endl;
     std::cout << "lowerSeedRadius              = " << lowerSeedRadius << std::endl;
-    std::cout << "upperSeed                    = " << upperSeed[0] << ", " << upperSeed[1] << ", " << upperSeed[2]  << std::endl;
+    std::cout << "upperSeed                    = " << upperSeed[0] << ", "
+                                                   << upperSeed[1] << ", "
+                                                   << upperSeed[2]  << std::endl;
     std::cout << "upperSeedRadius              = " << upperSeedRadius << std::endl;
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
     for (size_t i = 0; i < airwayFragmentSeeds.size(); ++i) {
-      std::cout << "airwayFragmentSeed " << i << " = " << airwayFragmentSeeds[i][0] << ", "
-        << airwayFragmentSeeds[i][1] << ", " << airwayFragmentSeeds[i][2] << std::endl;
+      std::cout << "airwayFragmentSeed " << i << " = " 
+        << airwayFragmentSeeds[i][0] << ", "
+        << airwayFragmentSeeds[i][1] << ", "
+        << airwayFragmentSeeds[i][2] << std::endl;
     }
-    std::cout << "----------------------------------------------------------------------------------" << std::endl;
+    if (airwayFragmentSeeds.size()) {
+      std::cout << "----------------------------------------------------------------------------------" << std::endl;
+    }
     std::cout << "dMaxAirwayRadius             = " << dMaxAirwayRadius << std::endl;
     std::cout << "dErodeDistance               = " << dErodeDistance << std::endl;
     std::cout << "iComponent                   = " << iComponent << std::endl;
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
-    for (size_t i = 0; i < maxillarySinusesSeeds.size(); ++i) std::cout << "maxillarySinusesSeed " << i << " = " << maxillarySinusesSeeds[i][0] << ", " << maxillarySinusesSeeds[i][1] << ", " << maxillarySinusesSeeds[i][2] << std::endl;
+    for (size_t i = 0; i < maxillarySinusesSeeds.size(); ++i) {
+      std::cout << "maxillarySinusesSeed " << i << " = " 
+        << maxillarySinusesSeeds[i][0] << ", "
+        << maxillarySinusesSeeds[i][1] << ", "
+        << maxillarySinusesSeeds[i][2] << std::endl;
+    }
+    if (maxillarySinusesSeeds.size() > 0) {
+      std::cout << "----------------------------------------------------------------------------------" << std::endl;
+    }
     std::cout << "maxillarySinusesSeedsRadius  = " << maxillarySinusesSeedsRadius << std::endl;
     std::cout << "erosionPercentage            = " << erosionPercentage << std::endl;
     std::cout << "bRemoveMaxillarySinuses      = " << bRemoveMaxillarySinuses << std::endl;
@@ -134,51 +150,68 @@ int main( int argc, char * argv[] )
   args.bRAIImage     = bRAIImage;
   args.sRAIImagePath = sRAIImagePath;
 
-  if (bDebug) OutputAllSettings( argc, argv ); // Output the arguments
+  if (bDebug) {
+    // Output the arguments
+    OutputAllSettings( argc, argv );
+  }
 
   itk::ImageIOBase::IOPixelType     inputPixelType;
   itk::ImageIOBase::IOComponentType inputComponentType;
 
   int ret = EXIT_FAILURE;
 
-  try
-  {
+  try {
     GetImageType(inputImage, inputPixelType, inputComponentType);
 
-    switch( inputComponentType )
-    {
-#if 0
+    switch( inputComponentType ) {
+#if defined(SUPPORT_UCHAR_PIXEL)
       case itk::ImageIOBase::UCHAR:
-        std::cout<<"Unsigned char images not supported"<< std::endl;
-        break;
-      case itk::ImageIOBase::CHAR:
-        std::cout<<"Char images not supported"<<std::endl;
+        std::cout << "Unsigned char images not supported" << std::endl;
         break;
 #endif
-      case itk::ImageIOBase::USHORT:
-        std::cout<<"Unsigned short images not supported"<<std::endl;
+#if defined(SUPPORT_CHAR_PIXEL)
+      case itk::ImageIOBase::CHAR:
+        std::cout << "Char images not supported" << std::endl;
         break;
+#endif
+#if defined(SUPPORT_USHORT_PIXEL)
+      case itk::ImageIOBase::USHORT:
+        std::cout << "Unsigned short images not supported" << std::endl;
+        break;
+#endif
+#if defined(SUPPORT_SHORT_PIXEL)
       case itk::ImageIOBase::SHORT:
         ret = AirwaySegmenter::ExecuteFromFile( args, static_cast<short>(0) );
         break;
-#if 0
+#endif
+#if defined(SUPPORT_UINT_PIXEL)
       case itk::ImageIOBase::UINT:
-        std::cout<<"Unsigned int images not supported"<<std::endl;
+        std::cout << "Unsigned int images not supported" << std::endl;
         break;
+#endif
+#if defined(SUPPORT_INT_PIXEL)
       case itk::ImageIOBase::INT:
         ret = AirwaySegmenter::ExecuteFromFile( args, static_cast<int>(0) );
         break;
+#endif
+#if defined(SUPPORT_ULONG_PIXEL)
       case itk::ImageIOBase::ULONG:
-        std::cout<<"Unsigned long images not supported"<<std::endl;
+        std::cout << "Unsigned long images not supported" << std::endl;
         break;
+#endif
+#if defined(SUPPORT_LONG_PIXEL)
       case itk::ImageIOBase::LONG:
         ret = AirwaySegmenter::ExecuteFromFile( args, static_cast<long>(0) );
         break;
+#endif
+#if defined(SUPPORT_FLOAT_PIXEL)
       case itk::ImageIOBase::FLOAT:
-        std::cout<<"Float images not supported"<<std::endl;
+        std::cout << "Float images not supported" << std::endl;
         break;
+#endif
+#if defined(SUPPORT_DOUBLE_PIXEL)
       case itk::ImageIOBase::DOUBLE:
-        std::cout<<"Double images not supported"<<std::endl;
+        std::cout << "Double images not supported" << std::endl;
         break;
 #endif
       case itk::ImageIOBase::UNKNOWNCOMPONENTTYPE:
@@ -186,10 +219,7 @@ int main( int argc, char * argv[] )
         std::cout << "unknown component type" << std::endl;
         break;
     }
-  }
-
-  catch( itk::ExceptionObject & excep )
-  {
+  } catch( itk::ExceptionObject & excep ) {
     std::cerr << argv[0] << ": exception caught !" << std::endl;
     std::cerr << excep << std::endl;
 
@@ -198,4 +228,3 @@ int main( int argc, char * argv[] )
 
   return ret;
 }
-
