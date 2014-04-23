@@ -55,7 +55,7 @@
         </point>
         <double>
             <name>lowerSeedRadius</name>
-            <label>Lower Seed's radius</label>
+            <label>Lower Seed's Radius</label>
             <longflag>--lowerSeedRadius</longflag>
             <default>20.0</default>
             <minimum>5.0</minimum>
@@ -72,7 +72,7 @@
         </point>
         <double>
             <name>upperSeedRadius</name>
-            <label>Upper Seed's radius</label>
+            <label>Upper Seed's Radius</label>
             <longflag>--upperSeedRadius</longflag>
             <default>20.0</default>
             <minimum>5.0</minimum>
@@ -81,18 +81,80 @@
         </double>
     </parameters>
 
-    <parameters>
-      <label>Airway Fragment Seeds</label>
-      <description><![CDATA[Used to mark disconnected airway fragments that should be included in the segmentation.]]>
-      </description>
+    <parameters advanced="true">
+        <label>Airway Fragment Seeds</label>
+        <description><![CDATA[Used to mark disconnected airway fragments that should be included in the segmentation.]]>
+        </description>
 
-      <point multiple="true" coordinateSystem="ras">
-            <name>airwayFragmentSeeds</name>
-            <label>Airway Fragment Seeds</label>
-            <longflag>--airwayFragmentSeeds</longflag>
-            <description><![CDATA[Point placed within disconnected airway fragments.]]></description>
+        <point multiple="true" coordinateSystem="ras">
+              <name>airwayFragmentSeeds</name>
+              <label>Airway Fragment Seeds</label>
+              <longflag>--airwayFragmentSeeds</longflag>
+              <description><![CDATA[Point placed within disconnected airway fragments.]]></description>
+              <default>None</default>
+        </point>
+    </parameters>
+
+    <parameters advanced="true">
+        <label>Tracheal Tube Seed</label>
+        <description><![CDATA[Seed used to aid algorithm in removing tracheal tube.]]></description>
+
+        <point  multiple="false" coordinateSystem="ras">
+            <name>trachealTubeSeed</name>
+            <label>Tracheal Tube Seed</label>
+            <longflag>--trachealTubeSeed</longflag>
+            <description><![CDATA[Point marking a tracheal tube. It should be placed along the length of the tracheal tube.]]></description>
             <default>None</default>
-      </point>
+        </point>
+        <double>
+            <name>trachealTubeSeedRadius</name>
+            <label>Tracheal Tube Seed Radius</label>
+            <longflag>--trachealTubeSeedRadius</longflag>
+            <default>10.0</default>
+            <minimum>5.0</minimum>
+            <maximum>50.0</maximum>
+            <description><![CDATA[The radius of the tracheal tube seed.]]></description>
+        </double>
+    </parameters>
+
+    <parameters advanced="true">
+        <label>Maxillary Sinus Removal</label>
+        <description><![CDATA[Advanced settings used to remove the maxillary sinuses.]]></description>
+        <boolean>
+            <name>bRemoveMaxillarySinuses</name>
+            <longflag>--removeMaxillarySinuses</longflag>
+            <label>Remove Maxillary Sinuses</label>
+            <default>False</default>
+            <description><![CDATA[Choose whether or not to remove the maxillary sinuses.]]></description>
+        </boolean>
+        <point multiple="true" coordinateSystem="ras">
+            <name>maxillarySinusesSeeds</name>
+            <label>Maxillary Sinuses Seeds</label>
+            <longflag>--maxillarySinusesSeed</longflag>
+            <description><![CDATA[Seed points placed whithin the maxillary sinuses.]]></description>
+            <default>None</default>
+        </point>
+        <double>
+            <name>maxillarySinusesSeedsRadius</name>
+            <label>Maxillary Sinuses Seed's radius</label>
+            <longflag>--maxillarySinusesRadius</longflag>
+            <default>5.0</default>
+            <minimum>0.1</minimum>
+            <maximum>50.0</maximum>
+            <description><![CDATA[The radius of all the maxillary sinuses seeds.]]></description>
+        </double>
+        <double>
+            <name>erosionPercentage</name>
+            <label>Erosion for the maxillary removal</label>
+            <longflag>--erosionPercentage</longflag>
+            <constraints>
+              <default>0.20</default>
+              <minimum>0</minimum>
+              <maximum>1</maximum>
+              <step>.01</step>
+            </constraints>
+            <description><![CDATA[The percentage of the erodeDistance parameter used during removal of the maxillary sinuses.]]></description>
+        </double>
     </parameters>
 
     <parameters advanced="true">
@@ -137,46 +199,6 @@
             <label>Breathing mask thickness</label>
             <default>3</default>
             <description><![CDATA[Thickness of breathing mask or other thin structures to remove.]]></description>
-        </double>
-    </parameters>
-
-    <parameters advanced="true">
-        <label>Maxillary Sinus Removal</label>
-        <description><![CDATA[Advanced settings used to remove the maxillary sinuses.]]></description>
-        <boolean>
-            <name>bRemoveMaxillarySinuses</name>
-            <longflag>--removeMaxillarySinuses</longflag>
-            <label>Remove Maxillary Sinuses</label>
-            <default>False</default>
-            <description><![CDATA[Choose whether or not to remove the maxillary sinuses.]]></description>
-        </boolean>
-        <point multiple="true" coordinateSystem="ras">
-            <name>maxillarySinusesSeeds</name>
-            <label>Maxillary Sinuses Seeds</label>
-            <longflag>--maxillarySinusesSeed</longflag>
-            <description><![CDATA[Seed points placed whithin the maxillary sinuses.]]></description>
-            <default>None</default>
-        </point>
-        <double>
-            <name>maxillarySinusesSeedsRadius</name>
-            <label>Maxillary Sinuses Seed's radius</label>
-            <longflag>--maxillarySinusesRadius</longflag>
-            <default>5.0</default>
-            <minimum>0.1</minimum>
-            <maximum>50.0</maximum>
-            <description><![CDATA[The radius of all the maxillary sinuses seeds.]]></description>
-        </double>
-        <double>
-            <name>erosionPercentage</name>
-            <label>Erosion for the maxillary removal</label>
-            <longflag>--erosionPercentage</longflag>
-            <constraints>
-              <default>0.20</default>
-              <minimum>0</minimum>
-              <maximum>1</maximum>
-              <step>.01</step>
-            </constraints>
-            <description><![CDATA[The percentage of the erodeDistance parameter used during removal of the maxillary sinuses.]]></description>
         </double>
     </parameters>
 

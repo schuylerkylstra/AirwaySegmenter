@@ -49,6 +49,7 @@ namespace
     std::cout << "input image                  = " << inputImage << std::endl;
     std::cout << "output image                 = " << outputImage << std::endl;
     std::cout << "output geometry              = " << outputGeometry << std::endl;
+
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
     std::cout << "lowerSeed                    = " << lowerSeed[0] << ", "
                                                    << lowerSeed[1] << ", "
@@ -58,9 +59,10 @@ namespace
                                                    << upperSeed[1] << ", "
                                                    << upperSeed[2]  << std::endl;
     std::cout << "upperSeedRadius              = " << upperSeedRadius << std::endl;
+
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
     for (size_t i = 0; i < airwayFragmentSeeds.size(); ++i) {
-      std::cout << "airwayFragmentSeed " << i << " = " 
+      std::cout << "airwayFragmentSeed " << i << " = "
         << airwayFragmentSeeds[i][0] << ", "
         << airwayFragmentSeeds[i][1] << ", "
         << airwayFragmentSeeds[i][2] << std::endl;
@@ -68,26 +70,37 @@ namespace
     if (airwayFragmentSeeds.size()) {
       std::cout << "----------------------------------------------------------------------------------" << std::endl;
     }
-    std::cout << "dMaxAirwayRadius             = " << dMaxAirwayRadius << std::endl;
-    std::cout << "dErodeDistance               = " << dErodeDistance << std::endl;
-    std::cout << "iComponent                   = " << iComponent << std::endl;
+
+    if (trachealTubeSeed.size() >= 3) {
+      std::cout << "trachealTubeSeed             = " << trachealTubeSeed[0] << ", "
+                                                     << trachealTubeSeed[1] << ", "
+                                                     << trachealTubeSeed[2] << std::endl;
+    }
+    std::cout << "trachealTubeSeedRadius       = " << trachealTubeSeedRadius << std::endl;
+
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
+    std::cout << "bRemoveMaxillarySinuses      = " << bRemoveMaxillarySinuses << std::endl;
     for (size_t i = 0; i < maxillarySinusesSeeds.size(); ++i) {
-      std::cout << "maxillarySinusesSeed " << i << " = " 
+      std::cout << "maxillarySinusesSeed " << i << " = "
         << maxillarySinusesSeeds[i][0] << ", "
         << maxillarySinusesSeeds[i][1] << ", "
         << maxillarySinusesSeeds[i][2] << std::endl;
     }
-    if (maxillarySinusesSeeds.size() > 0) {
-      std::cout << "----------------------------------------------------------------------------------" << std::endl;
-    }
     std::cout << "maxillarySinusesSeedsRadius  = " << maxillarySinusesSeedsRadius << std::endl;
     std::cout << "erosionPercentage            = " << erosionPercentage << std::endl;
-    std::cout << "bRemoveMaxillarySinuses      = " << bRemoveMaxillarySinuses << std::endl;
+
+    std::cout << "----------------------------------------------------------------------------------" << std::endl;
+    std::cout << "dMaxAirwayRadius             = " << dMaxAirwayRadius << std::endl;
+    std::cout << "dErodeDistance               = " << dErodeDistance << std::endl;
+    std::cout << "iComponent                   = " << iComponent << std::endl;
+    std::cout << "bRemoveBreathingMask         = " << bRemoveBreathingMask << std::endl;
+    std::cout << "dBreathingMaskThickness      = " << dBreathingMaskThickness << std::endl;
+
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
     std::cout << "bNoWarning                   = " << bNoWarning <<std::endl;
     std::cout << "bDebug                       = " << bDebug << std::endl;
     std::cout << "sDebugFolder                 = " << sDebugFolder << std::endl;
+
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
     std::cout << "bRAIImage                    = " << bRAIImage << std::endl;
     std::cout << "sRAIImagePath                = " << sRAIImagePath << std::endl;
@@ -129,19 +142,21 @@ int main( int argc, char * argv[] )
   args.upperSeed       = upperSeed;
   args.upperSeedRadius = upperSeedRadius;
 
-  args.bRemoveBreathingMask = bRemoveBreathingMask;
-  args.dBreathingMaskThickness = dBreathingMaskThickness;
-
   args.airwayFragmentSeeds = airwayFragmentSeeds;
 
-  args.dMaxAirwayRadius             = dMaxAirwayRadius;
-  args.dErodeDistance               = dErodeDistance;
-  args.iComponent                   = iComponent;
+  args.trachealTubeSeed       = trachealTubeSeed;
+  args.trachealTubeSeedRadius = trachealTubeSeedRadius;
 
-  args.maxillarySinusesSeeds = maxillarySinusesSeeds;
+  args.bRemoveMaxillarySinuses     = bRemoveMaxillarySinuses;
+  args.maxillarySinusesSeeds       = maxillarySinusesSeeds;
   args.maxillarySinusesSeedsRadius = maxillarySinusesSeedsRadius;
   args.erosionPercentage           = erosionPercentage;
-  args.bRemoveMaxillarySinuses     = bRemoveMaxillarySinuses;
+
+  args.dMaxAirwayRadius        = dMaxAirwayRadius;
+  args.dErodeDistance          = dErodeDistance;
+  args.iComponent              = iComponent;
+  args.bRemoveBreathingMask    = bRemoveBreathingMask;
+  args.dBreathingMaskThickness = dBreathingMaskThickness;
 
   args.bNoWarning   = bNoWarning;
   args.bDebug       = bDebug;

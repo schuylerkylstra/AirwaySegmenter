@@ -36,19 +36,21 @@ public:
   std::vector< float > upperSeed;
   double               upperSeedRadius;
 
-  bool   bRemoveBreathingMask;
-  double dBreathingMaskThickness;
+  std::vector< std::vector< float > > airwayFragmentSeeds;
+
+  std::vector< float > trachealTubeSeed;
+  double               trachealTubeSeedRadius;
+
+  bool                                bRemoveMaxillarySinuses;
+  std::vector< std::vector< float > > maxillarySinusesSeeds;
+  double                              maxillarySinusesSeedsRadius;
+  double                              erosionPercentage;
 
   double dMaxAirwayRadius;
   double dErodeDistance;
   int    iComponent;
-
-  std::vector< std::vector< float > > airwayFragmentSeeds;
-
-  std::vector< std::vector< float > > maxillarySinusesSeeds;
-  double                              maxillarySinusesSeedsRadius;
-  double                              erosionPercentage;
-  bool                                bRemoveMaxillarySinuses;
+  bool   bRemoveBreathingMask;
+  double dBreathingMaskThickness;
 
   bool        bNoWarning;
   bool        bDebug;
