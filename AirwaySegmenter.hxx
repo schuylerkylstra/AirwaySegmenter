@@ -511,6 +511,15 @@ namespace AirwaySegmenter {
     // Get the threshold used in the otsu-thresholding
     T dThreshold = maskedOtsuThresholdFilter->GetThreshold();
     std::cout << "Threshold computed: " << dThreshold << std::endl;
+    if (args.bDebug) {
+      std::string filePath( args.sDebugFolder );
+      filePath.append( "/" );
+      filePath.append( "FinalThreshold.txt" );
+      std::ofstream thresholdFile( filePath.c_str() );
+      if ( thresholdFile.is_open() ) {
+        thresholdFile << dThreshold << std::endl;
+      }
+    }
 
     airwayThreshold = dThreshold;
 
