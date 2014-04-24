@@ -18,6 +18,26 @@
 #ifndef AirwaySegmenter_DebugMacros_h_included
 #define AirwaySegmenter_DebugMacros_h_included
 
+#define DEBUG_WRITE_LABEL_IMAGE_ONLY( image )                           \
+    if ( args.bDebug ) {                                                \
+      typename WriterLabelType::Pointer writer =                        \
+        WriterLabelType::New();                                         \
+                                                                        \
+      writer->SetInput( image );                                        \
+      std::string filename = args.sDebugFolder;                         \
+      filename += "/"#image".nrrd";                                     \
+      writer->SetFileName( filename );                                  \
+                                                                        \
+      try {                                                             \
+        writer->Update();                                               \
+      } catch ( itk::ExceptionObject & excep ) {                        \
+        std::cerr << "Exception caught "                                \
+          << "when writing " << image                                   \
+          << ".nrrd!" << std::endl;                                     \
+        std::cerr << excep << std::endl;                                \
+      }                                                                 \
+    }                                                                   \
+
 #define DEBUG_WRITE_IMAGE( filter )                                     \
     if ( args.bDebug ) {                                                \
       typedef itk::ImageFileWriter< FloatImageType > WriterFloatType;   \

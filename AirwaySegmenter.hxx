@@ -217,6 +217,7 @@ namespace AirwaySegmenter {
 
     LabelImageType::Pointer initialBinaryImage;
 
+    // Optionally remove thin objects such as breathing masks
     if ( args.bRemoveBreathingMask ) {
       // Initial erosion that removes narrow objects such as breathing masks
       typename ErodeFilterType::Pointer thinErosion = ErodeFilterType::New();
@@ -237,10 +238,12 @@ namespace AirwaySegmenter {
     }
 
     /* Custom Fast marching */
-    typedef itk::FastMarchingImageFilter<FloatImageType, FloatImageType>  FastMarchingFilterType;
-    typedef typename FastMarchingFilterType::NodeContainer                NodeContainer;
-    typedef typename FastMarchingFilterType::NodeType                     NodeType;
-    typedef itk::ImageRegionConstIterator<LabelImageType>                 ConstIteratorType;
+    typedef itk::FastMarchingImageFilter<FloatImageType, FloatImageType> FastMarchingFilterType;
+    typedef typename FastMarchingFilterType::NodeContainer               NodeContainer;
+    typedef typename FastMarchingFilterType::NodeType                    NodeType;
+    typedef itk::ImageRegionIterator<InputImageType>                     InputIteratorType;
+    typedef itk::ImageRegionIterator<LabelImageType>                     IteratorType;
+    typedef itk::ImageRegionConstIterator<LabelImageType>                ConstIteratorType;
 
     /* Instantiations */
     typename FastMarchingFilterType::Pointer fastMarchingDilate = FastMarchingFilterType::New();
@@ -309,11 +312,6 @@ namespace AirwaySegmenter {
     DEBUG_WRITE_LABEL_IMAGE( thresholdDilation );
 
     /* Erosion (Thus creating a closing) */
-    typename ThresholdingFilterType::Pointer thresholdClosing = ThresholdingFilterType::New();
-    thresholdClosing->SetLowerThreshold( 0.0 );
-    thresholdClosing->SetUpperThreshold( args.dMaxAirwayRadius );
-    thresholdClosing->SetOutsideValue( 1 );
-    thresholdClosing->SetInsideValue( 0 );
 
     /* Instantiations */
     typename FastMarchingFilterType::Pointer fastMarchingClose = FastMarchingFilterType::New();
@@ -363,9 +361,21 @@ namespace AirwaySegmenter {
     TRY_UPDATE( fastMarchingClose );
     DEBUG_WRITE_IMAGE( fastMarchingClose );
 
+    typename ThresholdingFilterType::Pointer thresholdClosing = ThresholdingFilterType::New();
+    thresholdClosing->SetLowerThreshold( 0.0 );
+    thresholdClosing->SetUpperThreshold( args.dMaxAirwayRadius );
+    thresholdClosing->SetOutsideValue( 1 );
+    thresholdClosing->SetInsideValue( 0 );
     thresholdClosing->SetInput( fastMarchingClose->GetOutput() );
     TRY_UPDATE( thresholdClosing );
     DEBUG_WRITE_LABEL_IMAGE( thresholdClosing );
+
+    typedef itk::MaskedOtsuThresholdImageFilter< InputImageType,
+                                                 LabelImageType,
+                                                 LabelImageType >               MaskedOtsuThresholdFilterType;
+    typedef itk::ConnectedComponentImageFilter<LabelImageType, LabelImageType > ConnectedComponentType;
+    typedef itk::RelabelComponentImageFilter<LabelImageType, LabelImageType >   RelabelComponentType;
+    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType >    FinalThresholdingFilterType;
 
     /* Difference between closed image and ostu-threshold of the original one */
     typedef itk::AbsoluteValueDifferenceImageFilter<LabelImageType, LabelImageType, LabelImageType > TAbsoluteValueDifferenceFilter;
@@ -399,10 +409,6 @@ namespace AirwaySegmenter {
       std::cout << "Extracting largest connected component ... ";
     }
 
-    typedef itk::ConnectedComponentImageFilter<LabelImageType, LabelImageType > ConnectedComponentType;
-    typedef itk::RelabelComponentImageFilter<LabelImageType, LabelImageType > RelabelComponentType;
-    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType > FinalThresholdingFilterType;
-
     typename ConnectedComponentType::Pointer connected = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabel = RelabelComponentType::New();
     typename FinalThresholdingFilterType::Pointer largestComponentThreshold = FinalThresholdingFilterType::New();
@@ -421,9 +427,15 @@ namespace AirwaySegmenter {
     int componentNumber = 0;
 
     if (args.iComponent <= 0) {
-      componentNumber = LabelIt<T>(relabel->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
+      componentNumber = LabelIt< T >( relabel->GetOutput(),
+                                      args.upperSeed,
+                                      args.upperSeedRadius,
+                                      args.bDebug );
       if (componentNumber <= 0 ) {
-        componentNumber = LabelIt<T>(relabel->GetOutput(), args.lowerSeed, args.lowerSeedRadius, args.bDebug);
+        componentNumber = LabelIt< T >( relabel->GetOutput(),
+                                        args.lowerSeed,
+                                        args.lowerSeedRadius,
+                                        args.bDebug );
       }
       std::cout << "Label found = " << componentNumber << std::endl;
     } else {
@@ -447,17 +459,19 @@ namespace AirwaySegmenter {
 
     // Add in fragmented components of the airway marked with seeds
     LabelImageType * relabelImage = relabel->GetOutput();
-    for ( size_t i = 0; i < args.airwayFragmentSeeds.size(); ++i ) {
-      std::vector< float > fragmentSeed = args.airwayFragmentSeeds[i];
+    if ( args.bAddAirwayFragments ) {
+      for ( size_t i = 0; i < args.airwayFragmentSeeds.size(); ++i ) {
+        std::vector< float > fragmentSeed = args.airwayFragmentSeeds[i];
 
-      typename ConnectedThresholdFilterType::InputImageType::PointType point;
-      point[0] = -fragmentSeed[0];
-      point[1] = -fragmentSeed[1];
-      point[2] =  fragmentSeed[2];
-      std::cout << "Fragment seed " << i << ": " << point << std::endl;
-      typename ConnectedThresholdFilterType::IndexType index;
-      relabelImage->TransformPhysicalPointToIndex( point, index );
-      firstAirwayFragmentFilter->AddSeed( index );
+        typename ConnectedThresholdFilterType::InputImageType::PointType point;
+        point[0] = -fragmentSeed[0];
+        point[1] = -fragmentSeed[1];
+        point[2] =  fragmentSeed[2];
+        std::cout << "Fragment seed " << i << ": " << point << std::endl;
+        typename ConnectedThresholdFilterType::IndexType index;
+        relabelImage->TransformPhysicalPointToIndex( point, index );
+        firstAirwayFragmentFilter->AddSeed( index );
+      }
     }
     TRY_UPDATE( firstAirwayFragmentFilter );
     DEBUG_WRITE_LABEL_IMAGE( firstAirwayFragmentFilter );
@@ -480,8 +494,8 @@ namespace AirwaySegmenter {
     TRY_UPDATE( firstCombineThresholdFilter );
     DEBUG_WRITE_LABEL_IMAGE( firstCombineThresholdFilter );
 
-    /* Now do another Otsu thresholding but just around the current segmentation */
-    /*  For this, we need to make it first a little bit bigger */
+    /* Now do another Otsu thresholding but just around the current segmentation. */
+    /* For this, we need to make it first a little bit bigger */
     typename ThresholdingFilterType::Pointer extendSegmentation =
       ThresholdingFilterType::New();
     extendSegmentation->SetInput( FastMarchIt<T>(firstCombineThresholdFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius) ); // There are enough few seeds that they can all be considered as part of the trial seeds
@@ -493,7 +507,6 @@ namespace AirwaySegmenter {
     DEBUG_WRITE_LABEL_IMAGE( extendSegmentation );
 
     /* Now do another Otsu thresholding but restrict the statistics to the currently obtained area  (custom ostu-threshold filter) */
-    typedef itk::MaskedOtsuThresholdImageFilter<InputImageType, LabelImageType, LabelImageType >MaskedOtsuThresholdFilterType;
     typename MaskedOtsuThresholdFilterType::Pointer maskedOtsuThresholdFilter = MaskedOtsuThresholdFilterType::New();
     maskedOtsuThresholdFilter->SetInsideValue( 1 );
     maskedOtsuThresholdFilter->SetOutsideValue( 0 );
@@ -508,7 +521,7 @@ namespace AirwaySegmenter {
     TRY_UPDATE( maskedOtsu );
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsu );
 
-    // Get the threshold used in the otsu-thresholding
+    // Get the threshold used in the Otsu-thresholding
     T dThreshold = maskedOtsuThresholdFilter->GetThreshold();
     std::cout << "Threshold computed: " << dThreshold << std::endl;
     if (args.bDebug) {
@@ -650,7 +663,6 @@ namespace AirwaySegmenter {
     labelBranchGeometry->CalculatePixelIndicesOff();
     labelBranchGeometry->CalculateOrientedIntensityRegionsOff();
     TRY_UPDATE( labelBranchGeometry );
-    DEBUG_WRITE_LABEL_IMAGE( labelBranchGeometry );
 
     int nBranchParts = relabelBranch->GetNumberOfObjects();
     int nBranchId = 1;
@@ -882,17 +894,19 @@ namespace AirwaySegmenter {
 
     // Add in fragmented components of the airway marked with seeds
     relabelImage = relabelFinalWithoutLung->GetOutput();
-    for ( size_t i = 0; i < args.airwayFragmentSeeds.size(); ++i ) {
-      std::vector< float > fragmentSeed = args.airwayFragmentSeeds[i];
+    if ( args.bAddAirwayFragments ) {
+      for ( size_t i = 0; i < args.airwayFragmentSeeds.size(); ++i ) {
+        std::vector< float > fragmentSeed = args.airwayFragmentSeeds[i];
 
-      typename ConnectedThresholdFilterType::InputImageType::PointType point;
-      point[0] = -fragmentSeed[0];
-      point[1] = -fragmentSeed[1];
-      point[2] =  fragmentSeed[2];
-      std::cout << "Fragment seed " << i << ": " << point << std::endl;
-      typename ConnectedThresholdFilterType::IndexType index;
-      relabelImage->TransformPhysicalPointToIndex( point, index );
-      finalFragmentFilter->AddSeed( index );
+        typename ConnectedThresholdFilterType::InputImageType::PointType point;
+        point[0] = -fragmentSeed[0];
+        point[1] = -fragmentSeed[1];
+        point[2] =  fragmentSeed[2];
+        std::cout << "Fragment seed " << i << ": " << point << std::endl;
+        typename ConnectedThresholdFilterType::IndexType index;
+        relabelImage->TransformPhysicalPointToIndex( point, index );
+        finalFragmentFilter->AddSeed( index );
+      }
     }
     TRY_UPDATE( finalFragmentFilter );
     DEBUG_WRITE_LABEL_IMAGE( finalFragmentFilter );
@@ -1045,6 +1059,78 @@ namespace AirwaySegmenter {
       DEBUG_WRITE_LABEL_IMAGE( thresholdCleanUp );
 
       finalSegmentation = thresholdCleanUp->GetOutput();
+    }
+
+    // Optionally remove tracheal tube
+    if ( args.bRemoveTrachealTube && args.trachealTubeSeed.size() >= 3 ) {
+      // Do another Otsu threshold on the patient masked region only.
+      // This should separate high-intensity objects such as bones and
+      // tracheal tubes from the rest of the body.
+      typename MaskedOtsuThresholdFilterType::Pointer trachealTubeFilter =
+        MaskedOtsuThresholdFilterType::New();
+      trachealTubeFilter->SetInsideValue( 0 );
+      trachealTubeFilter->SetOutsideValue( 1 );
+      trachealTubeFilter->SetMaskImage( otsuThresholdFilter->GetOutput() );
+      trachealTubeFilter->SetInput( originalImage );
+      TRY_UPDATE( trachealTubeFilter );
+      DEBUG_WRITE_LABEL_IMAGE( trachealTubeFilter );
+
+      typename ConnectedComponentType::Pointer trachealConnected = ConnectedComponentType::New();
+      trachealConnected->SetInput( trachealTubeFilter->GetOutput() );
+      TRY_UPDATE( trachealConnected );
+      DEBUG_WRITE_LABEL_IMAGE( trachealConnected );
+
+      typename RelabelComponentType::Pointer trachealRelabel = RelabelComponentType::New();
+      trachealRelabel->SetNumberOfObjectsToPrint( 5 );
+      trachealRelabel->SetInput( trachealConnected->GetOutput() );
+      TRY_UPDATE( trachealRelabel );
+      DEBUG_WRITE_LABEL_IMAGE( trachealRelabel );
+
+      int componentNumber = LabelIt< T >( trachealRelabel->GetOutput(),
+                                          args.trachealTubeSeed,
+                                          args.trachealTubeSeedRadius,
+                                          args.bDebug );
+
+      typename FinalThresholdingFilterType::Pointer trachealLargestComponentThreshold = FinalThresholdingFilterType::New();
+      trachealLargestComponentThreshold->SetInput( trachealRelabel->GetOutput() );
+      trachealLargestComponentThreshold->SetLowerThreshold( componentNumber );
+      trachealLargestComponentThreshold->SetUpperThreshold( componentNumber );
+      trachealLargestComponentThreshold->SetInsideValue( 1 );
+      trachealLargestComponentThreshold->SetOutsideValue( 0 );
+      TRY_UPDATE( trachealLargestComponentThreshold );
+      DEBUG_WRITE_LABEL_IMAGE( trachealLargestComponentThreshold );
+
+      // Now that we have the tracheal tube, expand the segmentation a little bit
+      // to make sure we don't miss any if the tracheal tube.
+      typename ThresholdingFilterType::Pointer expandedTrachealTube =
+        ThresholdingFilterType::New();
+      expandedTrachealTube->SetInput( FastMarchIt< T >( trachealLargestComponentThreshold->GetOutput(), "Out", 1.0 /*mm*/, 0.0 ) );
+      expandedTrachealTube->SetLowerThreshold( 0.0 );
+      expandedTrachealTube->SetUpperThreshold( 1.0 );
+      expandedTrachealTube->SetOutsideValue( 0 );
+      expandedTrachealTube->SetInsideValue( 1 );
+      TRY_UPDATE( expandedTrachealTube );
+      DEBUG_WRITE_LABEL_IMAGE( expandedTrachealTube );
+
+      // Iterate over the expanded tracheal tube mask and make it part of the airway.
+      ConstIteratorType trachealIterator( expandedTrachealTube->GetOutput(),
+                                          expandedTrachealTube->GetOutput()->GetLargestPossibleRegion() );
+      IteratorType finalIterator( finalSegmentation,
+                                  finalSegmentation->GetLargestPossibleRegion() );
+      InputIteratorType inputIterator( originalImage, originalImage->GetLargestPossibleRegion() );
+      for ( trachealIterator.GoToBegin(),
+            finalIterator.GoToBegin(),
+            inputIterator.GoToBegin();
+            !trachealIterator.IsAtEnd();
+            ++trachealIterator,
+            ++finalIterator,
+            ++inputIterator ) {
+        if ( trachealIterator.Get() > 0 ) { // && inputIterator.Get() > dThreshold ) {
+          finalIterator.Set( 1 );
+        }
+      }
+
+      DEBUG_WRITE_LABEL_IMAGE_ONLY( finalSegmentation );
     }
 
     if (args.bDebug) {

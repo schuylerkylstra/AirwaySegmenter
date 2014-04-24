@@ -36,8 +36,10 @@ public:
   std::vector< float > upperSeed;
   double               upperSeedRadius;
 
+  bool                                bAddAirwayFragments;
   std::vector< std::vector< float > > airwayFragmentSeeds;
 
+  bool                 bRemoveTrachealTube;
   std::vector< float > trachealTubeSeed;
   double               trachealTubeSeedRadius;
 

@@ -86,10 +86,17 @@
         <description><![CDATA[Used to mark disconnected airway fragments that should be included in the segmentation.]]>
         </description>
 
+        <boolean>
+            <name>bAddAirwayFragments</name>
+            <longflag>--addAirwayFragments</longflag>
+            <label>Add Airway Fragments</label>
+            <default>false</default>
+            <description><![CDATA[If enabled, add in airway fragments in which the --airwayFragmentSeed arguments reside that are within the intensity range of air.]]></description>
+        </boolean>
         <point multiple="true" coordinateSystem="ras">
               <name>airwayFragmentSeeds</name>
               <label>Airway Fragment Seeds</label>
-              <longflag>--airwayFragmentSeeds</longflag>
+              <longflag>--airwayFragmentSeed</longflag>
               <description><![CDATA[Point placed within disconnected airway fragments.]]></description>
               <default>None</default>
         </point>
@@ -99,6 +106,13 @@
         <label>Tracheal Tube Seed</label>
         <description><![CDATA[Seed used to aid algorithm in removing tracheal tube.]]></description>
 
+        <boolean>
+            <name>bRemoveTrachealTube</name>
+            <longflag>--removeTrachealTube</longflag>
+            <label>Remove Tracheal Tube</label>
+            <default>false</default>
+            <description><![CDATA[Optionally remove a tracheal tube from the airway. This option requires the --trachealTubeSeed to be set.]]></description>
+        </boolean>
         <point  multiple="false" coordinateSystem="ras">
             <name>trachealTubeSeed</name>
             <label>Tracheal Tube Seed</label>

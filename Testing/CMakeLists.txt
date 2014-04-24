@@ -24,14 +24,15 @@ add_test( NAME SegmentationTest_1003
             --upperSeed 34.5117,267.316,67.2616
             --debug
             --debugFolder "${TEST_OUTPUT_DIR}"
-            --airwayFragmentSeeds 12.988,203.453,66.529
-            --airwayFragmentSeeds 12.988,180.216,-18.903
+            --addAirwayFragments true
+            --airwayFragmentSeed 12.988,203.453,66.529
+            --airwayFragmentSeed 12.988,180.216,-18.903
             --breathingMaskThickness 0
             --RAIImage
             --RAIImagePath "${TEST_OUTPUT_DIR}/1003_RAIImage.nrrd"
             "${TEST_DATA_DIR}/Input/1003.nrrd"
             "${TEST_OUTPUT_DIR}/1003_Segmented.nrrd"
-            "${TEST_OUTPUT_DIR}/1003_Segmented.vtp"
+            ""
           --compare
             "${TEST_OUTPUT_DIR}/1003_Segmented.nrrd"
             "${TEST_BASELINES_DIR}/1003.nrrd"
