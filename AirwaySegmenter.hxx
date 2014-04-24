@@ -515,6 +515,8 @@ namespace AirwaySegmenter {
     TRY_UPDATE( maskedOtsuThresholdFilter );
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsuThresholdFilter );
 
+    // Masked Otsu filter above does a whole-image thresholding, so mask it here
+    // by the bounds of the patient.
     typename TMaskImageFilter::Pointer maskedOtsu = TMaskImageFilter::New();
     maskedOtsu->SetInput1( maskedOtsuThresholdFilter->GetOutput() );
     maskedOtsu->SetInput2( thresholdDifference->GetOutput() ); // Second input is the  mask
@@ -1061,6 +1063,10 @@ namespace AirwaySegmenter {
       finalSegmentation = thresholdCleanUp->GetOutput();
     }
 
+    if (args.bDebug) {
+      std::cout << "Writing the final image ... " << std::endl;
+    }
+
     // Optionally remove tracheal tube
     if ( args.bRemoveTrachealTube && args.trachealTubeSeed.size() >= 3 ) {
       // Do another Otsu threshold on the patient masked region only.
@@ -1125,16 +1131,11 @@ namespace AirwaySegmenter {
             ++trachealIterator,
             ++finalIterator,
             ++inputIterator ) {
-        if ( trachealIterator.Get() > 0 ) { // && inputIterator.Get() > dThreshold ) {
+        if ( trachealIterator.Get() > 0 && inputIterator.Get() > dThreshold ) {
           finalIterator.Set( 1 );
+          inputIterator.Set( dThreshold - 1 );
         }
       }
-
-      DEBUG_WRITE_LABEL_IMAGE_ONLY( finalSegmentation );
-    }
-
-    if (args.bDebug) {
-      std::cout << "Writing the final image ... " << std::endl;
     }
 
     output = finalSegmentation;
