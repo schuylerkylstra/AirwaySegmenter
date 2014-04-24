@@ -82,7 +82,7 @@
     </parameters>
 
     <parameters advanced="true">
-        <label>Airway Fragment Seeds</label>
+        <label>Add Airway Fragments</label>
         <description><![CDATA[Used to mark disconnected airway fragments that should be included in the segmentation.]]>
         </description>
 
@@ -103,7 +103,7 @@
     </parameters>
 
     <parameters advanced="true">
-        <label>Tracheal Tube Seed</label>
+        <label>Tracheal Tube Removal</label>
         <description><![CDATA[Seed used to aid algorithm in removing tracheal tube.]]></description>
 
         <boolean>
