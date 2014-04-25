@@ -135,6 +135,7 @@ int main( int argc, char * argv[] )
   AirwaySegmenter::ProgramArguments args;
   args.inputImage           = inputImage;
   args.outputImage          = outputImage;
+  args.createGeometry       = createGeometry;
   args.outputGeometry       = outputGeometry;
   args.returnParameterFile = returnParameterFile;
 

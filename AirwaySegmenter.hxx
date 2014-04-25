@@ -39,9 +39,14 @@
 #include <itkSmartPointer.h>
 #include <itkSpatialOrientationAdapter.h>
 
+/* Local ITK includes. */
 #include "itkAirwaySurfaceWriter.h"
 #include "itkPhysicalSpaceBinaryDilateImageFilter.h"
 #include "itkPhysicalSpaceBinaryErodeImageFilter.h"
+
+/* VTK includes */
+#include "vtkPolyData.h"
+#include "vtkXMLPolyDataWriter.h"
 
 #include "DebugMacros.h"
 #include "FastMarchIt.hxx"
@@ -1195,7 +1200,7 @@ namespace AirwaySegmenter {
     TRY_UPDATE( writer );
 
     /* Write Surface */
-    if ( args.outputGeometry != "" ) {
+    if ( args.outputGeometry != "" && args.createGeometry ) {
       typedef itk::AirwaySurfaceWriter<InputImageType, LabelImageType>
         SurfaceWriterType;
       typename SurfaceWriterType::Pointer surfaceWriter =
@@ -1207,6 +1212,16 @@ namespace AirwaySegmenter {
       surfaceWriter->SetInput( resampledInput );
       surfaceWriter->SetThreshold( airwayThreshold );
       TRY_UPDATE( surfaceWriter );
+    } else {
+      // Create empty polydata and save it.
+      vtkPolyData * empty = vtkPolyData::New();
+      vtkXMLPolyDataWriter * writer = vtkXMLPolyDataWriter::New();
+      writer->SetFileName( args.outputGeometry.c_str() );
+      writer->SetInputData( empty );
+      writer->Update();
+
+      empty->Delete();
+      writer->Delete();
     }
 
     return EXIT_SUCCESS;

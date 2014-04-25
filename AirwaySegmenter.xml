@@ -31,6 +31,14 @@
             <description><![CDATA[Segmented output image.]]></description>
         </image>
 
+        <boolean>
+            <name>createGeometry</name>
+            <label>Create Output Geometry</label>
+            <longflag>--createOutputGeometry</longflag>
+            <description><![CDATA[If enabled, create the airway polygonal geometry.]]></description>
+            <default>true</default>
+        </boolean>
+
         <geometry>
           <name>outputGeometry</name>
           <label>Output Geometry</label>
