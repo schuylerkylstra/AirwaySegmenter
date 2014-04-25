@@ -133,9 +133,10 @@ int main( int argc, char * argv[] )
   PARSE_ARGS;
 
   AirwaySegmenter::ProgramArguments args;
-  args.inputImage     = inputImage;
-  args.outputImage    = outputImage;
-  args.outputGeometry = outputGeometry;
+  args.inputImage           = inputImage;
+  args.outputImage          = outputImage;
+  args.outputGeometry       = outputGeometry;
+  args.returnParameterFile = returnParameterFile;
 
   args.lowerSeed       = lowerSeed;
   args.lowerSeedRadius = lowerSeedRadius;

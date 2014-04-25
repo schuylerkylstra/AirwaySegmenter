@@ -514,6 +514,7 @@ namespace AirwaySegmenter {
     maskedOtsuThresholdFilter->SetInput( originalImage );
     TRY_UPDATE( maskedOtsuThresholdFilter );
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsuThresholdFilter );
+    T dThreshold = maskedOtsuThresholdFilter->GetThreshold();
 
     // Masked Otsu filter above does a whole-image thresholding, so mask it here
     // by the bounds of the patient.
@@ -522,19 +523,6 @@ namespace AirwaySegmenter {
     maskedOtsu->SetInput2( thresholdDifference->GetOutput() ); // Second input is the  mask
     TRY_UPDATE( maskedOtsu );
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsu );
-
-    // Get the threshold used in the Otsu-thresholding
-    T dThreshold = maskedOtsuThresholdFilter->GetThreshold();
-    std::cout << "Threshold computed: " << dThreshold << std::endl;
-    if (args.bDebug) {
-      std::string filePath( args.sDebugFolder );
-      filePath.append( "/" );
-      filePath.append( "FinalThreshold.txt" );
-      std::ofstream thresholdFile( filePath.c_str() );
-      if ( thresholdFile.is_open() ) {
-        thresholdFile << dThreshold << std::endl;
-      }
-    }
 
     airwayThreshold = dThreshold;
 
@@ -1146,6 +1134,15 @@ namespace AirwaySegmenter {
 
     if (args.bDebug) {
       std::cout << "done." << std::endl;
+    }
+
+    // Write the threshold used in the Otsu-thresholding
+    std::cout << "Threshold computed: " << dThreshold << std::endl;
+    if ( args.returnParameterFile.size() > 0 ) {
+      std::ofstream parametersFile( args.returnParameterFile.c_str() );
+      if ( parametersFile.is_open() ) {
+        parametersFile << "computedThreshold = " << dThreshold << std::endl;
+      }
     }
 
     return EXIT_SUCCESS;

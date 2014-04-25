@@ -30,6 +30,7 @@ public:
   std::string inputImage;
   std::string outputImage;
   std::string outputGeometry;
+  std::string returnParameterFile;
 
   std::vector< float > lowerSeed;
   double               lowerSeedRadius;

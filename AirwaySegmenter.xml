@@ -254,6 +254,18 @@
         </string>
     </parameters>
 
+    <parameters>
+        <label>Algorithm Output Parameters</label>
+        <description><![CDATA[Simple parameters returned by the algorithm.]]></description>
+
+        <double>
+            <name>computedThreshold</name>
+            <channel>output</channel>
+            <label>Computed threshold</label>
+            <description><![CDATA[Threshold automatically determined by the algorithm.]]></description>
+        </double>
+    </parameters>
+
     <parameters advanced="true">
         <label>Optional Output</label>
         <description><![CDATA[Optional output. These outputs will not be loaded automatically in Slicer]]></description>
