@@ -146,6 +146,9 @@ int main( int argc, char * argv[] )
   args.bAddAirwayFragments = bAddAirwayFragments;
   args.airwayFragmentSeeds = airwayFragmentSeeds;
 
+  args.bRemoveBreathingMask    = bRemoveBreathingMask;
+  args.dBreathingMaskThickness = dBreathingMaskThickness;
+
   args.bRemoveTrachealTube          = bRemoveTrachealTube;
   args.trachealTubeSeed             = trachealTubeSeed;
   args.trachealTubeSeedRadius       = trachealTubeSeedRadius;
@@ -159,8 +162,6 @@ int main( int argc, char * argv[] )
   args.dMaxAirwayRadius        = dMaxAirwayRadius;
   args.dErodeDistance          = dErodeDistance;
   args.iComponent              = iComponent;
-  args.bRemoveBreathingMask    = bRemoveBreathingMask;
-  args.dBreathingMaskThickness = dBreathingMaskThickness;
 
   args.bNoWarning   = bNoWarning;
   args.bDebug       = bDebug;

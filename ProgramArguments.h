@@ -40,6 +40,9 @@ public:
   bool                                bAddAirwayFragments;
   std::vector< std::vector< float > > airwayFragmentSeeds;
 
+  bool   bRemoveBreathingMask;
+  double dBreathingMaskThickness;
+
   bool                 bRemoveTrachealTube;
   std::vector< float > trachealTubeSeed;
   double               trachealTubeSeedRadius;
@@ -53,8 +56,6 @@ public:
   double dMaxAirwayRadius;
   double dErodeDistance;
   int    iComponent;
-  bool   bRemoveBreathingMask;
-  double dBreathingMaskThickness;
 
   bool        bNoWarning;
   bool        bDebug;

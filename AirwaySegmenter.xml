@@ -103,6 +103,27 @@
     </parameters>
 
     <parameters advanced="true">
+        <label>Breathing Mask Removal</label>
+        <description><![CDATA[Parameters useful for removing breathing masks.]]></description>
+
+        <boolean>
+            <name>bRemoveBreathingMask</name>
+            <longflag>--removeBreathingMask</longflag>
+            <label>Remove breathing mask</label>
+            <default>False</default>
+            <description><![CDATA[Remove thin objects, such as breathing masks. WARNING: Enabling this option may remove thin structures in the sinus region.]]></description>
+        </boolean>
+
+        <double>
+            <name>dBreathingMaskThickness</name>
+            <longflag>--breathingMaskThickness</longflag>
+            <label>Breathing mask thickness</label>
+            <default>3</default>
+            <description><![CDATA[Thickness of breathing mask or other thin structures to remove.]]></description>
+        </double>
+    </parameters>
+
+    <parameters advanced="true">
         <label>Tracheal Tube Removal</label>
         <description><![CDATA[Seed used to aid algorithm in removing tracheal tube.]]></description>
 
@@ -207,22 +228,6 @@
             <default>-1</default>
             <description><![CDATA[Use this to manually choose the possible airway label. If the value is less than 0, it won't be used.]]></description>
         </integer>
-
-        <boolean>
-            <name>bRemoveBreathingMask</name>
-            <longflag>--removeBreathingMask</longflag>
-            <label>Remove breathing mask</label>
-            <default>False</default>
-            <description><![CDATA[Remove thin objects, such as breathing masks. WARNING: Enabling this option may remove thin structures in the sinus region.]]></description>
-        </boolean>
-
-        <double>
-            <name>dBreathingMaskThickness</name>
-            <longflag>--breathingMaskThickness</longflag>
-            <label>Breathing mask thickness</label>
-            <default>3</default>
-            <description><![CDATA[Thickness of breathing mask or other thin structures to remove.]]></description>
-        </double>
     </parameters>
 
     <parameters advanced="true">
