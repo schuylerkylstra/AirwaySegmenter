@@ -42,6 +42,7 @@ public:
   bool                 bRemoveTrachealTube;
   std::vector< float > trachealTubeSeed;
   double               trachealTubeSeedRadius;
+  double               trachealTubeDilationDistance;
 
   bool                                bRemoveMaxillarySinuses;
   std::vector< std::vector< float > > maxillarySinusesSeeds;

@@ -1106,21 +1106,23 @@ namespace AirwaySegmenter {
       TRY_UPDATE( trachealLargestComponentThreshold );
       DEBUG_WRITE_LABEL_IMAGE( trachealLargestComponentThreshold );
 
-      // Now that we have the tracheal tube, expand the segmentation a little bit
-      // to make sure we don't miss any if the tracheal tube.
-      typename ThresholdingFilterType::Pointer expandedTrachealTube =
-        ThresholdingFilterType::New();
-      expandedTrachealTube->SetInput( FastMarchIt< T >( trachealLargestComponentThreshold->GetOutput(), "Out", 1.0 /*mm*/, 0.0 ) );
-      expandedTrachealTube->SetLowerThreshold( 0.0 );
-      expandedTrachealTube->SetUpperThreshold( 1.0 );
-      expandedTrachealTube->SetOutsideValue( 0 );
-      expandedTrachealTube->SetInsideValue( 1 );
-      TRY_UPDATE( expandedTrachealTube );
-      DEBUG_WRITE_LABEL_IMAGE( expandedTrachealTube );
+      // Morphological closing to fill in the center of the tracheal tube.
+      double closingDistance = 5.0; // mm
+      typename DilateFilterType::Pointer trachealDilate = DilateFilterType::New();
+      trachealDilate->SetDilationDistance( closingDistance );
+      trachealDilate->SetInput( trachealLargestComponentThreshold->GetOutput() );
+      TRY_UPDATE( trachealDilate );
+      DEBUG_WRITE_LABEL_IMAGE( trachealDilate );
 
-      // Iterate over the expanded tracheal tube mask and make it part of the airway.
-      ConstIteratorType trachealIterator( expandedTrachealTube->GetOutput(),
-                                          expandedTrachealTube->GetOutput()->GetLargestPossibleRegion() );
+      typename ErodeFilterType::Pointer trachealErode = ErodeFilterType::New();
+      trachealErode->SetErosionDistance( closingDistance - args.trachealTubeDilationDistance );
+      trachealErode->SetInput( trachealDilate->GetOutput() );
+      TRY_UPDATE( trachealErode );
+      DEBUG_WRITE_LABEL_IMAGE( trachealErode );
+
+      // Iterate over the closed tracheal tube mask and make it part of the airway.
+      ConstIteratorType trachealIterator( trachealErode->GetOutput(),
+                                          trachealErode->GetOutput()->GetLargestPossibleRegion() );
       IteratorType finalIterator( finalSegmentation,
                                   finalSegmentation->GetLargestPossibleRegion() );
       InputIteratorType inputIterator( originalImage, originalImage->GetLargestPossibleRegion() );
@@ -1131,14 +1133,16 @@ namespace AirwaySegmenter {
             ++trachealIterator,
             ++finalIterator,
             ++inputIterator ) {
-        if ( trachealIterator.Get() > 0 && inputIterator.Get() > dThreshold ) {
+        if ( trachealIterator.Get() > 0 ) {
           finalIterator.Set( 1 );
-          inputIterator.Set( dThreshold - 1 );
+          inputIterator.Set( -1024 );
         }
       }
     }
 
     output = finalSegmentation;
+
+    DEBUG_WRITE_LABEL_IMAGE_ONLY( finalSegmentation );
 
     if (args.bDebug) {
       std::cout << "done." << std::endl;

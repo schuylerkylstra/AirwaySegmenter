@@ -145,9 +145,10 @@ int main( int argc, char * argv[] )
   args.bAddAirwayFragments = bAddAirwayFragments;
   args.airwayFragmentSeeds = airwayFragmentSeeds;
 
-  args.bRemoveTrachealTube    = bRemoveTrachealTube;
-  args.trachealTubeSeed       = trachealTubeSeed;
-  args.trachealTubeSeedRadius = trachealTubeSeedRadius;
+  args.bRemoveTrachealTube          = bRemoveTrachealTube;
+  args.trachealTubeSeed             = trachealTubeSeed;
+  args.trachealTubeSeedRadius       = trachealTubeSeedRadius;
+  args.trachealTubeDilationDistance = trachealTubeDilationDistance;
 
   args.bRemoveMaxillarySinuses     = bRemoveMaxillarySinuses;
   args.maxillarySinusesSeeds       = maxillarySinusesSeeds;

@@ -129,6 +129,15 @@
             <maximum>50.0</maximum>
             <description><![CDATA[The radius of the tracheal tube seed.]]></description>
         </double>
+        <double>
+            <name>trachealTubeDilationDistance</name>
+            <label>Tracheal Tube Dilation Distance</label>
+            <longflag>--trachealTubeDilationDistance</longflag>
+            <default>0.0</default>
+            <minimum>0.0</minimum>
+            <maximum>5.0</maximum>
+            <description><![CDATA[Distance of the dilation to apply to the segmented tracheal tube object. Increase this if any parts of the trachea tube are not included in the segmentation.]]></description>
+        </double>
     </parameters>
 
     <parameters advanced="true">
