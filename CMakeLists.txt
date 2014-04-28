@@ -33,12 +33,27 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/CMake/AirwaySegmenterConfig.h.in
 
 include_directories(Code)
 
-#Finally the project
+set( AirwaySegmenterCoreLib_SRCS
+  GetImageType.cxx
+)
+
+add_library( AirwaySegmenterCore ${AirwaySegmenterCoreLib_SRCS} )
+
+#Finally the projects
 SEMMacroBuildCLI(
   NAME ${PROJECT_NAME}
-  TARGET_LIBRARIES ${ITK_LIBRARIES} ${VTK_LIBRAIRIES}
+  TARGET_LIBRARIES AirwaySegmenterCore
+                   ${ITK_LIBRARIES}
   EXECUTABLE_ONLY
-  )
+)
+
+SEMMacroBuildCLI(
+  NAME AirwayGeometryCreator
+  TARGET_LIBRARIES AirwaySegmenterCore
+                   ${ITK_LIBRARIES}
+                   ${VTK_LIBRARIES}
+  EXECUTABLE_ONLY
+)
   
 #Testing
 OPTION(BUILD_TESTING "Build tests." ON)

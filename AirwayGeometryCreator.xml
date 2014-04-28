@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<executable>
+    <category>Surface Models</category>
+    <title>Airway Geometry Creator</title>
+    <description><![CDATA[From a binary segmentation of a CT image and an intensity threshold, creates a polygonal dataset by contouring the CT image within the binary segmentation.]]></description>
+    <version>1.0</version>
+    <documentation-url>TODO</documentation-url>
+    <license></license>
+    <contributor>Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen</contributor>
+    <acknowledgements><![CDATA[TODO]]></acknowledgements>
+
+    <parameters>
+        <label>Input/Output</label>
+        <description><![CDATA[Input/Output Parameters]]></description>
+
+        <image>
+            <name>inputImage</name>
+            <label>Input Image</label>
+            <channel>input</channel>
+            <index>0</index>
+            <default>None</default>
+            <description><![CDATA[Original CT image from which segmentation image was generated.]]></description>
+        </image>
+        <image>
+            <name>segmentationImage</name>
+            <label>Segmentation Image</label>
+            <channel>input</channel>
+            <index>1</index>
+            <default>None</default>
+            <description><![CDATA[Segmentation image.]]></description>
+        </image>
+        <geometry>
+            <name>outputGeometry</name>
+            <label>Output Geometry</label>
+            <channel>output</channel>
+            <index>2</index>
+            <description><![CDATA[Segmented surface image.]]></description>
+        </geometry>
+        <double>
+            <name>threshold</name>
+            <label>Threshold</label>
+            <longflag>--threshold</longflag>
+            <default>0.0</default>
+            <description><![CDATA[The segmentation threshold separating air from tissue. This is reported by the Airway Segmenter module.]]></description>
+        </double>
+    </parameters>
+
+ </executable>

@@ -29,6 +29,7 @@
 #include "AirwaySegmenterCLP.h"
 #include "AirwaySegmenterConfig.h"
 #include "AirwaySegmenter.hxx"
+#include "GetImageType.h"
 #include "ProgramArguments.h"
 
 #include "itkAirwaySurfaceWriter.h"
@@ -109,21 +110,6 @@ namespace
     return 0;
   }
 
-  /*******************************************************************/
-  /** Query the image type. */
-  /*******************************************************************/
-  void GetImageType (std::string fileName,itk::ImageIOBase::IOPixelType &pixelType,itk::ImageIOBase::IOComponentType &componentType)
-  {
-    typedef itk::Image<unsigned char, 3> ImageType;
-    itk::ImageFileReader<ImageType>::Pointer imageReader = itk::ImageFileReader<ImageType>::New();
-
-    imageReader->SetFileName(fileName.c_str());
-    imageReader->UpdateOutputInformation();
-
-    pixelType = imageReader->GetImageIO()->GetPixelType();
-    componentType = imageReader->GetImageIO()->GetComponentType();
-  }
-
 } // End namespace
 
 /*******************************************************************/
@@ -182,7 +168,7 @@ int main( int argc, char * argv[] )
   int ret = EXIT_FAILURE;
 
   try {
-    GetImageType(inputImage, inputPixelType, inputComponentType);
+    AirwaySegmenter::GetImageType(inputImage, inputPixelType, inputComponentType);
 
     switch( inputComponentType ) {
 #if defined(SUPPORT_UCHAR_PIXEL)
