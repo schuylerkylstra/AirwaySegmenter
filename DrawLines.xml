@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<executable>
+    <category>Filtering</category>
+    <title>Draw Lines</title>
+    <description><![CDATA[Draws a series of line segments between consective points.]]></description>
+    <version>1.0</version>
+    <documentation-url>TODO</documentation-url>
+    <license></license>
+    <contributor>Cory Quammen</contributor>
+    <acknowledgements><![CDATA[TODO]]></acknowledgements>
+
+    <parameters>
+        <label>Input/Output</label>
+        <description><![CDATA[Input/Output Parameters]]></description>
+
+        <image>
+            <name>inputImage</name>
+            <label>Input Image</label>
+            <channel>input</channel>
+            <index>0</index>
+            <default>None</default>
+            <description><![CDATA[Image into which the line segments should be drawn.]]></description>
+        </image>
+        <image>
+            <name>outputImage</name>
+            <label>Output Image</label>
+            <channel>output</channel>
+            <index>2</index>
+            <default>None</default>
+            <description><![CDATA[Result of the line drawing operation.]]></description>
+        </image>
+        <point multiple="true" coordinateSystem="ras">
+            <name>endpoints</name>
+            <label>Endpoints</label>
+            <longflag>--endpoint</longflag>
+            <default>None</default>
+        </point>
+        <double>
+            <name>radius</name>
+            <label>Radius</label>
+            <longflag>--radius</longflag>
+            <description><![CDATA[Radius of line segment (mm).]]></description>
+            <default>3.0</default>
+        </double>
+        <double>
+            <name>value</name>
+            <label>Value</label>
+            <longflag>--value</longflag>
+            <description><![CDATA[Value to use when drawing line.]]></description>
+            <default>0.0</default>
+        </double>
+    </parameters>
+
+</executable>
+
