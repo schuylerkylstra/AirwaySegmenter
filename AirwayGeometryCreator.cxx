@@ -18,8 +18,7 @@
 
 #include "AirwayGeometryCreatorCLP.h"
 #include "AirwaySegmenterConfig.h"
-
-#include "GetImageType.h"
+#include "AirwaySegmenterCore.h"
 
 #include <itkImageFileReader.h>
 

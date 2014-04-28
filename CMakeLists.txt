@@ -34,7 +34,8 @@ CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/CMake/AirwaySegmenterConfig.h.in
 include_directories(Code)
 
 set( AirwaySegmenterCoreLib_SRCS
-  GetImageType.cxx
+  Code/AirwaySegmenterCore.h
+  Code/AirwaySegmenterCore.cxx
 )
 
 add_library( AirwaySegmenterCore ${AirwaySegmenterCoreLib_SRCS} )

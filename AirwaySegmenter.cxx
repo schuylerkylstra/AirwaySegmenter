@@ -29,7 +29,7 @@
 #include "AirwaySegmenterCLP.h"
 #include "AirwaySegmenterConfig.h"
 #include "AirwaySegmenter.hxx"
-#include "GetImageType.h"
+#include "AirwaySegmenterCore.h"
 #include "ProgramArguments.h"
 
 #include "itkAirwaySurfaceWriter.h"
