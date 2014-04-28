@@ -15,7 +15,7 @@
 //
 //  Authors: Marc Niethammer, Yi Hong, Johan Andruejol, Cory Quammen
 =============================================================================*/
-#include "GetImageType.h"
+#include "AirwaySegmenterCore.h"
 
 #include <itkImage.h>
 #include <itkImageFileReader.h>
