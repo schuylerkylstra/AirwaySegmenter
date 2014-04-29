@@ -28,35 +28,31 @@
 
 /*******************************************************************/
 /** Test wether a point is in a cylinder.
+/** Derived from http://www.flipcode.com/archives/Fast_Point-In-Cylinder_Test.shtml
 /*******************************************************************/
 bool InCylinder( const std::vector< float > & testPt,
                  const std::vector< float > & pt1,
                  const std::vector< float > & pt2,
                  double radius )
 {
-  double dx = pt2[0] - pt1[0];
-  double dy = pt2[1] - pt1[1];
-  double dz = pt2[2] - pt1[2];
+  float dx = pt2[0] - pt1[0];
+  float dy = pt2[1] - pt1[1];
+  float dz = pt2[2] - pt1[2];
   
-  double pdx = testPt[0] - pt1[0];
-  double pdy = testPt[1] - pt1[1];
-  double pdz = testPt[2] - pt1[2];
+  float pdx = testPt[0] - pt1[0];
+  float pdy = testPt[1] - pt1[1];
+  float pdz = testPt[2] - pt1[2];
   
-  //std::cout << "pdx: " << pdx << ", " << pdy << ", " << pdz << std::endl; 
+  float dot = pdx*dx + pdy*dy + pdz*dz;
   
-  double dot = pdx*dx + pdy*dy + pdz*dz;
-  
-  double lengthSquared = dx*dx + dy*dy + dz*dz;
+  float lengthSquared = dx*dx + dy*dy + dz*dz;
   
   if ( dot < 0.0 || dot > lengthSquared ) {
     // Point lies outside the ends of the cylinder
-    //std::cout << "dot: " << dot << std::endl;
-    //std::cout << "lengthSquared: " << lengthSquared << std::endl;
     return false;
   } else {
     // Check if distance from point to central axis is <= radius
     float dsq = (pdx*pdx + pdy*pdy + pdz*pdz) - dot*dot / lengthSquared;
-    //std::cout << "dsq: " << dsq << ", lengthSquared: " << lengthSquared << std::endl;
     return ( dsq <= radius*radius );
   }
   
