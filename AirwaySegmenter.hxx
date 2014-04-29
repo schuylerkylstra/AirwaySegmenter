@@ -632,6 +632,20 @@ namespace AirwaySegmenter {
       }
     }
 
+    if ( args.bDebug ) {
+      try {
+        typename WriterType::Pointer writer = WriterType::New();
+        writer->SetInput( imageBranch );
+        std::string fileName( args.sDebugFolder );
+        fileName.append( "/imageBranch-binary.nrrd" );
+        writer->SetFileName( fileName.c_str() );
+        writer->Update();
+      } catch ( itk::ExceptionObject & except ) {
+        std::cerr << "Exception occurred when writing imageBranch.nrrd" << std::endl;
+        std::cerr << except << std::endl;
+      }
+    }
+
     /* Clean up the ball region: First pass */
 
     /* First with simple threshold */
@@ -711,6 +725,9 @@ namespace AirwaySegmenter {
     typename ConnectedComponentType::Pointer connectedFinalWithoutLung = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabelFinalWithoutLung = RelabelComponentType::New();
     connectedFinalWithoutLung->SetInput( maskedOtsu->GetOutput() );
+    TRY_UPDATE( connectedFinalWithoutLung );
+    DEBUG_WRITE_LABEL_IMAGE( connectedFinalWithoutLung );
+
     relabelFinalWithoutLung->SetInput( connectedFinalWithoutLung->GetOutput() );
     relabelFinalWithoutLung->SetNumberOfObjectsToPrint( 5 );
     TRY_UPDATE( relabelFinalWithoutLung );
@@ -746,6 +763,20 @@ namespace AirwaySegmenter {
             }
           }
         }
+      }
+    }
+
+    if ( args.bDebug ) {
+      try {
+        typename WriterType::Pointer writer = WriterType::New();
+        writer->SetInput( imageBranch );
+        std::string fileName( args.sDebugFolder );
+        fileName.append( "/imageBranch-originalImage.nrrd" );
+        writer->SetFileName( fileName.c_str() );
+        writer->Update();
+      } catch ( itk::ExceptionObject & except ) {
+        std::cerr << "Exception occurred when writing imageBranch.nrrd" << std::endl;
+        std::cerr << except << std::endl;
       }
     }
 
