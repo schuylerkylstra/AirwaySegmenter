@@ -15,7 +15,7 @@
 
         <image>
             <name>inputImage</name>
-            <label>Input Image</label>
+            <label>Input image</label>
             <channel>input</channel>
             <index>0</index>
             <default>None</default>
@@ -24,7 +24,7 @@
 
         <image>
             <name>outputImage</name>
-            <label>Output Image</label>
+            <label>Output image</label>
             <channel>output</channel>
             <index>1</index>
             <default>None</default>
@@ -33,7 +33,7 @@
 
         <boolean>
             <name>createGeometry</name>
-            <label>Create Output Geometry</label>
+            <label>Create output geometry</label>
             <longflag>--createOutputGeometry</longflag>
             <description><![CDATA[If enabled, create the airway polygonal geometry.]]></description>
             <default>true</default>
@@ -41,7 +41,7 @@
 
         <geometry>
           <name>outputGeometry</name>
-          <label>Output Geometry</label>
+          <label>Output geometry</label>
           <channel>output</channel>
           <index>2</index>
           <description><![CDATA[Segmented surface image.]]></description>
@@ -56,14 +56,14 @@
 
         <point multiple="false" coordinateSystem="ras">
             <name>lowerSeed</name>
-            <label>Lower Seed</label>
+            <label>Lower seed</label>
             <longflag>--lowerSeed</longflag>
             <description><![CDATA[Usually placed at the carina of the trachea, this point is the center of the sphere that helps cut the lungs apart from the airway.]]>.</description>
             <default>0,0,0</default>
         </point>
         <double>
             <name>lowerSeedRadius</name>
-            <label>Lower Seed's Radius</label>
+            <label>Lower seed's radius</label>
             <longflag>--lowerSeedRadius</longflag>
             <default>20.0</default>
             <minimum>5.0</minimum>
@@ -73,14 +73,14 @@
 
         <point multiple="false" coordinateSystem="ras">
             <name>upperSeed</name>
-            <label>Upper Seed</label>
+            <label>Upper seed</label>
             <longflag>--upperSeed</longflag>
             <description><![CDATA[Point placed within the airway. It should be placed in the broadest airway region to help to identify it.]]></description>
             <default>0,0,0</default>
         </point>
         <double>
             <name>upperSeedRadius</name>
-            <label>Upper Seed's Radius</label>
+            <label>Upper seed's radius</label>
             <longflag>--upperSeedRadius</longflag>
             <default>20.0</default>
             <minimum>5.0</minimum>
@@ -97,13 +97,13 @@
         <boolean>
             <name>bAddAirwayFragments</name>
             <longflag>--addAirwayFragments</longflag>
-            <label>Add Airway Fragments</label>
+            <label>Add airway fragments</label>
             <default>false</default>
             <description><![CDATA[If enabled, add in airway fragments in which the --airwayFragmentSeed arguments reside that are within the intensity range of air.]]></description>
         </boolean>
         <point multiple="true" coordinateSystem="ras">
               <name>airwayFragmentSeeds</name>
-              <label>Airway Fragment Seeds</label>
+              <label>Airway fragment seeds</label>
               <longflag>--airwayFragmentSeed</longflag>
               <description><![CDATA[Point placed within disconnected airway fragments.]]></description>
               <default>None</default>
@@ -138,20 +138,20 @@
         <boolean>
             <name>bRemoveTrachealTube</name>
             <longflag>--removeTrachealTube</longflag>
-            <label>Remove Tracheal Tube</label>
+            <label>Remove tracheal tube</label>
             <default>false</default>
             <description><![CDATA[Optionally remove a tracheal tube from the airway. This option requires the --trachealTubeSeed to be set.]]></description>
         </boolean>
         <point  multiple="false" coordinateSystem="ras">
             <name>trachealTubeSeed</name>
-            <label>Tracheal Tube Seed</label>
+            <label>Tracheal tube seed</label>
             <longflag>--trachealTubeSeed</longflag>
             <description><![CDATA[Point marking a tracheal tube. It should be placed along the length of the tracheal tube.]]></description>
             <default>None</default>
         </point>
         <double>
             <name>trachealTubeSeedRadius</name>
-            <label>Tracheal Tube Seed Radius</label>
+            <label>Tracheal tube seed radius</label>
             <longflag>--trachealTubeSeedRadius</longflag>
             <default>10.0</default>
             <minimum>5.0</minimum>
@@ -160,7 +160,7 @@
         </double>
         <double>
             <name>trachealTubeDilationDistance</name>
-            <label>Tracheal Tube Dilation Distance</label>
+            <label>Tracheal tube dilation distance</label>
             <longflag>--trachealTubeDilationDistance</longflag>
             <default>0.0</default>
             <minimum>0.0</minimum>
@@ -175,20 +175,20 @@
         <boolean>
             <name>bRemoveMaxillarySinuses</name>
             <longflag>--removeMaxillarySinuses</longflag>
-            <label>Remove Maxillary Sinuses</label>
+            <label>Remove maxillary sinuses</label>
             <default>False</default>
             <description><![CDATA[Choose whether or not to remove the maxillary sinuses.]]></description>
         </boolean>
         <point multiple="true" coordinateSystem="ras">
             <name>maxillarySinusesSeeds</name>
-            <label>Maxillary Sinuses Seeds</label>
+            <label>Maxillary sinuses seeds</label>
             <longflag>--maxillarySinusesSeed</longflag>
             <description><![CDATA[Seed points placed whithin the maxillary sinuses.]]></description>
             <default>None</default>
         </point>
         <double>
             <name>maxillarySinusesSeedsRadius</name>
-            <label>Maxillary Sinuses Seed's radius</label>
+            <label>Maxillary sinuses seeds radius</label>
             <longflag>--maxillarySinusesRadius</longflag>
             <default>5.0</default>
             <minimum>0.1</minimum>
@@ -294,7 +294,7 @@
         <string>
             <name>sRAIImagePath</name>
             <longflag>--RAIImagePath</longflag>
-            <label>Destination folder for RAI image</label>
+            <label>Path to RAI image</label>
             <default>None</default>
             <description><![CDATA[Used only if "Write RAI image" is on. Choose the output path of the RAI image: note that a file name is required at the end of the path.]]></description>
         </string>

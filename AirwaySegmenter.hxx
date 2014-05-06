@@ -67,35 +67,37 @@ namespace AirwaySegmenter {
                typename TInput::PixelType & airwayThreshold )
   {
     /* Typedefs */
-    typedef float TFloatType;
+    typedef float                      TFloatType;
     typedef typename TInput::PixelType T;
-    typedef T TPixelType;
-    typedef T TLabelPixelType;
+    typedef T                          TPixelType;
+    typedef T                          TLabelPixelType;
 
     const unsigned char DIMENSION = 3;
 
-    typedef itk::Image<TPixelType, DIMENSION> InputImageType;
-    typedef itk::Image<TPixelType, DIMENSION> OutputImageType;
+    typedef itk::Image<TPixelType, DIMENSION>      InputImageType;
+    typedef itk::Image<TPixelType, DIMENSION>      OutputImageType;
     typedef itk::Image<TLabelPixelType, DIMENSION> LabelImageType;
-    typedef itk::Image<TFloatType, DIMENSION> FloatImageType;
-    typedef itk::Image<unsigned char, DIMENSION> UCharImageType;
+    typedef itk::Image<TFloatType, DIMENSION>      FloatImageType;
+    typedef itk::Image<unsigned char, DIMENSION>   UCharImageType;
 
-    typedef itk::ImageFileReader<InputImageType> ReaderType;
-    typedef itk::ImageFileReader<LabelImageType> ReaderLabelType;
+    typedef itk::ImageFileReader<InputImageType>  ReaderType;
+    typedef itk::ImageFileReader<LabelImageType>  ReaderLabelType;
     typedef itk::ImageFileWriter<OutputImageType> WriterType;
-    typedef itk::ImageFileWriter<LabelImageType> WriterLabelType;
+    typedef itk::ImageFileWriter<LabelImageType>  WriterLabelType;
 
-    typedef typename LabelImageType::SizeType TSize;
+    typedef typename LabelImageType::SizeType    TSize;
     typedef typename LabelImageType::SpacingType TSpacing;
-    typedef typename LabelImageType::PointType TOrigin;
-    typedef typename LabelImageType::IndexType TIndex;
+    typedef typename LabelImageType::PointType   TOrigin;
+    typedef typename LabelImageType::IndexType   TIndex;
 
     std::string sDebugFolder( args.sDebugFolder );
 
-    if(args.bDebug && (sDebugFolder.compare("None") == 0 || sDebugFolder.compare("") == 0)) sDebugFolder = "."; //Outputing debug result to current folder if not precised otherwise
+    if ( args.bDebug && (sDebugFolder.compare("None") == 0 ||
+         sDebugFolder.compare("") == 0) ) {
+      sDebugFolder = "."; //Outputing debug result to current folder if not precised otherwise
+    }
 
     /*  Automatic Resampling to RAI */
-
     typename InputImageType::DirectionType originalImageDirection = originalImage->GetDirection();
 
     itk::SpatialOrientationAdapter adapter;
@@ -103,19 +105,16 @@ namespace AirwaySegmenter {
 
     bool shouldConvert = false;
 
-    for (int i = 0; i < 3; ++i)
-    {
-      for (int j = 0; j < 3; ++j)
-      {
-        if (abs(originalImageDirection[i][j] - RAIDirection[i][j]) > 1e-6)
-        {
+    for ( int i = 0; i < 3; ++i ) {
+      for ( int j = 0; j < 3; ++j ) {
+        if (abs(originalImageDirection[i][j] - RAIDirection[i][j]) > 1e-6) {
           shouldConvert = true;
           break;
         }
       }
     }
 
-    typedef itk::ResampleImageFilter<InputImageType, InputImageType> ResampleImageFilterType;
+    typedef itk::ResampleImageFilter< InputImageType, InputImageType > ResampleImageFilterType;
     typename ResampleImageFilterType::Pointer resampleFilter = ResampleImageFilterType::New();
 
     if ( shouldConvert ) {
@@ -195,8 +194,7 @@ namespace AirwaySegmenter {
     resampledInput = originalImage;
 
     /* Write RAI Image if asked to */
-    if (args.bRAIImage)
-    {
+    if ( args.bRAIImage ) {
       typename WriterType::Pointer writer = WriterType::New();
       writer->SetInput( originalImage);
       writer->SetFileName( args.sRAIImagePath.c_str() );
@@ -204,7 +202,7 @@ namespace AirwaySegmenter {
     }
 
     /* Initial Otsu threshold first to separate patient from background. */
-    typedef itk::OtsuThresholdImageFilter<InputImageType, LabelImageType > OtsuThresholdFilterType;
+    typedef itk::OtsuThresholdImageFilter< InputImageType, LabelImageType > OtsuThresholdFilterType;
     typename OtsuThresholdFilterType::Pointer otsuThresholdFilter = OtsuThresholdFilterType::New();
     otsuThresholdFilter->SetInsideValue( 0 );
     otsuThresholdFilter->SetOutsideValue( 1 );
@@ -243,12 +241,12 @@ namespace AirwaySegmenter {
     }
 
     /* Custom Fast marching */
-    typedef itk::FastMarchingImageFilter<FloatImageType, FloatImageType> FastMarchingFilterType;
-    typedef typename FastMarchingFilterType::NodeContainer               NodeContainer;
-    typedef typename FastMarchingFilterType::NodeType                    NodeType;
-    typedef itk::ImageRegionIterator<InputImageType>                     InputIteratorType;
-    typedef itk::ImageRegionIterator<LabelImageType>                     IteratorType;
-    typedef itk::ImageRegionConstIterator<LabelImageType>                ConstIteratorType;
+    typedef itk::FastMarchingImageFilter< FloatImageType, FloatImageType > FastMarchingFilterType;
+    typedef typename FastMarchingFilterType::NodeContainer                 NodeContainer;
+    typedef typename FastMarchingFilterType::NodeType                      NodeType;
+    typedef itk::ImageRegionIterator<InputImageType>                       InputIteratorType;
+    typedef itk::ImageRegionIterator<LabelImageType>                       IteratorType;
+    typedef itk::ImageRegionConstIterator<LabelImageType>                  ConstIteratorType;
 
     /* Instantiations */
     typename FastMarchingFilterType::Pointer fastMarchingDilate = FastMarchingFilterType::New();
@@ -272,21 +270,22 @@ namespace AirwaySegmenter {
     unsigned int uiNumberOfAliveSeeds = 0;
     imageIterator.GoToBegin();
 
-    for ( binaryImageIterator.GoToBegin(); !binaryImageIterator.IsAtEnd(); ++binaryImageIterator )
-    {
+    for ( binaryImageIterator.GoToBegin(); !binaryImageIterator.IsAtEnd(); ++binaryImageIterator ) {
       if ( binaryImageIterator.Get() > 0 ) {
         node.SetIndex( binaryImageIterator.GetIndex() );
 
         if (imageIterator.Get() > 60) {
           aliveSeeds->InsertElement( uiNumberOfAliveSeeds++, node ); // Alive seed
         }
-        else trialSeeds->InsertElement( uiNumberOfTrialSeeds++, node ); // Trial seed
+        else {
+          trialSeeds->InsertElement( uiNumberOfTrialSeeds++, node ); // Trial seed
+        }
       }
 
       ++imageIterator;
     }
 
-    if (args.bDebug) {
+    if ( args.bDebug ) {
       std::cout << std::endl << std::endl;
       std::cout << "FastMarching Dilation: - Number of Alive Seeds: " << aliveSeeds->Size() << std::endl;
       std::cout << "             - Number of Trial Seeds: " << trialSeeds->Size() << std::endl;
@@ -306,7 +305,7 @@ namespace AirwaySegmenter {
     TRY_UPDATE( fastMarchingDilate );
     DEBUG_WRITE_IMAGE( fastMarchingDilate );
 
-    typedef itk::BinaryThresholdImageFilter<FloatImageType, LabelImageType > ThresholdingFilterType;
+    typedef itk::BinaryThresholdImageFilter< FloatImageType, LabelImageType > ThresholdingFilterType;
     typename ThresholdingFilterType::Pointer thresholdDilation = ThresholdingFilterType::New();
     thresholdDilation->SetLowerThreshold( 0.0 );
     thresholdDilation->SetUpperThreshold( args.dMaxAirwayRadius );
@@ -325,7 +324,7 @@ namespace AirwaySegmenter {
 
     // loop through the output image
     // and set all voxels to 0 seed voxels
-    typedef itk::ImageRegionConstIterator<FloatImageType>  ConstFloatIteratorType;
+    typedef itk::ImageRegionConstIterator< FloatImageType >  ConstFloatIteratorType;
     ConstFloatIteratorType floatDilatedImageIterator( fastMarchingDilate->GetOutput(), fastMarchingDilate->GetOutput()->GetLargestPossibleRegion() );
     ConstIteratorType binaryDilatedImageIterator( thresholdDilation->GetOutput(), thresholdDilation->GetOutput()->GetLargestPossibleRegion() );
     uiNumberOfTrialSeeds = 0;
@@ -377,10 +376,13 @@ namespace AirwaySegmenter {
 
     typedef itk::MaskedOtsuThresholdImageFilter< InputImageType,
                                                  LabelImageType,
-                                                 LabelImageType >               MaskedOtsuThresholdFilterType;
-    typedef itk::ConnectedComponentImageFilter<LabelImageType, LabelImageType > ConnectedComponentType;
-    typedef itk::RelabelComponentImageFilter<LabelImageType, LabelImageType >   RelabelComponentType;
-    typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType >    FinalThresholdingFilterType;
+                                                 LabelImageType > MaskedOtsuThresholdFilterType;
+    typedef itk::ConnectedComponentImageFilter< LabelImageType,
+                                                LabelImageType >  ConnectedComponentType;
+    typedef itk::RelabelComponentImageFilter< LabelImageType,
+                                              LabelImageType >    RelabelComponentType;
+    typedef itk::BinaryThresholdImageFilter< LabelImageType,
+                                             LabelImageType >     FinalThresholdingFilterType;
 
     /* Difference between closed image and ostu-threshold of the original one */
     typedef itk::AbsoluteValueDifferenceImageFilter<LabelImageType, LabelImageType, LabelImageType > TAbsoluteValueDifferenceFilter;
@@ -1201,8 +1203,8 @@ namespace AirwaySegmenter {
     typedef itk::Image<TPixelType, DIMENSION> OutputImageType;
     typedef itk::Image<TLabelPixelType, DIMENSION> LabelImageType;
     typedef itk::Image<TFloatType, DIMENSION> FloatImageType;
-    typedef itk::Image<unsigned char, DIMENSION> UCharImageType;
 
+    typedef itk::Image<unsigned char, DIMENSION> UCharImageType;
     typedef itk::ImageFileReader<InputImageType> ReaderType;
     typedef itk::ImageFileReader<LabelImageType> ReaderLabelType;
     typedef itk::ImageFileWriter<OutputImageType> WriterType;
