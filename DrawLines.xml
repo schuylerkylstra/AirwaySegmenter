@@ -5,14 +5,12 @@
     <description><![CDATA[Draws a series of line segments between consective points.]]></description>
     <version>1.0</version>
     <documentation-url>TODO</documentation-url>
-    <license></license>
+    <license>Apache 2.0</license>
     <contributor>Cory Quammen</contributor>
     <acknowledgements><![CDATA[TODO]]></acknowledgements>
-
     <parameters>
         <label>Input/Output</label>
         <description><![CDATA[Input/Output Parameters]]></description>
-
         <image>
             <name>inputImage</name>
             <label>Input Image</label>
@@ -50,6 +48,4 @@
             <default>0.0</default>
         </double>
     </parameters>
-
 </executable>
-

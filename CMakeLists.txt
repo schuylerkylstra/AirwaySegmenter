@@ -1,5 +1,10 @@
+cmake_policy(SET CMP0025 NEW)
+cmake_minimum_required(VERSION 2.8.9)
+if(NOT DEFINED CMAKE_MACOSX_RPATH)
+  set(CMAKE_MACOSX_RPATH OFF)
+endif()
+
 project(AirwaySegmenter)
-cmake_minimum_required(VERSION 2.8)
 
 #Find packages
 find_package(SlicerExecutionModel REQUIRED)
@@ -8,8 +13,12 @@ include(${SlicerExecutionModel_USE_FILE})
 find_package(VTK REQUIRED)
 INCLUDE(${VTK_USE_FILE})
 
-find_package(ITK REQUIRED)
+find_package(ITK 4 REQUIRED)
 INCLUDE(${ITK_USE_FILE})
+
+if(NOT ITKVtkGlue_LOADED)
+  include_directories(${AirwaySegmenter_SOURCE_DIR}/ThirdParty/ItkVtkGlue)
+endif()
 
 option( SUPPORT_UCHAR_PIXEL "Build with support for input images with unsigned char pixels." OFF )
 option( SUPPORT_CHAR_PIXEL "Build with support for input images with char pixels." OFF )
@@ -22,16 +31,12 @@ option( SUPPORT_LONG_PIXEL "Build with support for input images with long pixels
 option( SUPPORT_FLOAT_PIXEL "Build with support for input images with float pixels." OFF )
 option( SUPPORT_DOUBLE_PIXEL "Build with support for input images with double pixels." OFF )
 
-IF (ITK_VERSION_MAJOR VERSION_LESS "4")
-  FATAL_ERROR("ITK version must be at least 4.0 ")
-ENDIF()
-
 #Compatibility between slicer and the executable
 SET(SLICER_ITK_DIFFERENT true CACHE BOOL "Check if compiling with an ITK build different from the one used by Slicer")
-CONFIGURE_FILE(${CMAKE_SOURCE_DIR}/CMake/AirwaySegmenterConfig.h.in
-               ${CMAKE_BINARY_DIR}/AirwaySegmenterConfig.h)
+CONFIGURE_FILE(${AirwaySegmenter_SOURCE_DIR}/CMake/AirwaySegmenterConfig.h.in
+               ${AirwaySegmenter_BINARY_DIR}/AirwaySegmenterConfig.h)
 
-include_directories(Code)
+include_directories(${AirwaySegmenter_SOURCE_DIR} ${AirwaySegmenter_SOURCE_DIR}/Code)
 
 set( AirwaySegmenterCoreLib_SRCS
   Code/AirwaySegmenterCore.h
@@ -39,12 +44,14 @@ set( AirwaySegmenterCoreLib_SRCS
 )
 
 add_library( AirwaySegmenterCore ${AirwaySegmenterCoreLib_SRCS} )
+target_link_libraries(AirwaySegmenterCore ${ITK_LIBRARIES})
 
 #Finally the projects
 SEMMacroBuildCLI(
   NAME ${PROJECT_NAME}
   TARGET_LIBRARIES AirwaySegmenterCore
                    ${ITK_LIBRARIES}
+                   ${VTK_LIBRARIES}
   EXECUTABLE_ONLY
 )
 
@@ -52,6 +59,7 @@ SEMMacroBuildCLI(
   NAME AirwayGeometryCreator
   TARGET_LIBRARIES AirwaySegmenterCore
                    ${ITK_LIBRARIES}
+                   ${ItkVtkGlue_LIBRARIES}
                    ${VTK_LIBRARIES}
   EXECUTABLE_ONLY
 )

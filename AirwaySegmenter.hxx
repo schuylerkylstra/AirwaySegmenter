@@ -18,6 +18,8 @@
 #ifndef AirwaySegmenter_hxx_included
 #define AirwaySegmenter_hxx_included
 
+#include <cfloat>
+
 /* ITK includes */
 #include <itkAbsoluteValueDifferenceImageFilter.h>
 #include <itkAddImageFilter.h>
@@ -33,6 +35,7 @@
 #include <itkIdentityTransform.h>
 #include <itkLabelGeometryImageFilter.h>
 #include <itkMaskImageFilter.h>
+#include <itkMinimumMaximumImageCalculator.h>
 #include <itkOtsuThresholdImageFilter.h>
 #include <itkRelabelComponentImageFilter.h>
 #include <itkResampleImageFilter.h>
@@ -41,6 +44,7 @@
 
 /* Local ITK includes. */
 #include "itkAirwaySurfaceWriter.h"
+#include "itkMaskedOtsuThresholdImageFilter.h"
 #include "itkPhysicalSpaceBinaryDilateImageFilter.h"
 #include "itkPhysicalSpaceBinaryErodeImageFilter.h"
 
@@ -160,7 +164,7 @@ namespace AirwaySegmenter {
       upperPoint[1] = boundingBox[3];
       upperPoint[2] = boundingBox[5];
 
-      InputImageType::Pointer dummyImage = InputImageType::New();
+      typename InputImageType::Pointer dummyImage = InputImageType::New();
       dummyImage->SetOrigin( lowerPoint );
       dummyImage->SetSpacing( originalImage->GetSpacing() );
       dummyImage->SetLargestPossibleRegion( RegionType() );
@@ -220,7 +224,7 @@ namespace AirwaySegmenter {
     typedef itk::PhysicalSpaceBinaryErodeImageFilter< LabelImageType, LabelImageType >
       ErodeFilterType;
 
-    LabelImageType::Pointer initialBinaryImage;
+    typename LabelImageType::Pointer initialBinaryImage;
 
     // Optionally remove thin objects such as breathing masks
     if ( args.bRemoveBreathingMask ) {
@@ -1248,7 +1252,11 @@ namespace AirwaySegmenter {
       vtkPolyData * empty = vtkPolyData::New();
       vtkXMLPolyDataWriter * writer = vtkXMLPolyDataWriter::New();
       writer->SetFileName( args.outputGeometry.c_str() );
+#if VTK_MAJOR_VERSION <= 5
+      writer->SetInput( empty );
+#else
       writer->SetInputData( empty );
+#endif
       writer->Update();
 
       empty->Delete();
