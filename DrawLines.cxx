@@ -26,10 +26,10 @@
 #include <itkImageFileWriter.h>
 #include <itkImageRegionIteratorWithIndex.h>
 
-/*******************************************************************/
-/** Test wether a point is in a cylinder.
-/** Derived from http://www.flipcode.com/archives/Fast_Point-In-Cylinder_Test.shtml
-/*******************************************************************/
+/*******************************************************************
+ ** Test wether a point is in a cylinder.
+ ** Derived from http://www.flipcode.com/archives/Fast_Point-In-Cylinder_Test.shtml
+ *******************************************************************/
 bool InCylinder( const std::vector< float > & testPt,
                  const std::vector< float > & pt1,
                  const std::vector< float > & pt2,
@@ -59,9 +59,9 @@ bool InCylinder( const std::vector< float > & testPt,
   return false;
 }
 
-/*******************************************************************/
-/** Draw a line segment in an image. */
-/*******************************************************************/
+/*******************************************************************
+ ** Draw a line segment in an image.
+ *******************************************************************/
 template< typename TImage >
 void DrawLine( TImage * image,
                const std::vector< float > & pt1,
@@ -95,9 +95,9 @@ void DrawLine( TImage * image,
   }
 }
 
-/*******************************************************************/
-/** The primary function, templated by pixel type. */
-/*******************************************************************/
+/*******************************************************************
+ ** The primary function, templated by pixel type.
+ *******************************************************************/
 template< typename TPixel >
 int Execute( const std::string & inputImage,
              const std::string & outputImage,

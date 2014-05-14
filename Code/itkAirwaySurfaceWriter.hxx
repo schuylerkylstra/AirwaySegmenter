@@ -43,6 +43,7 @@
 #include <vtkSmoothPolyDataFilter.h>
 #include <vtkTransform.h>
 #include <vtkTransformPolyDataFilter.h>
+#include <vtkVersion.h>
 #include <vtkXMLPolyDataWriter.h>
 
 namespace itk {
@@ -165,7 +166,7 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
     resampleBinaryFilter->Update();
 
     typedef itk::BinaryThresholdImageFilter< TFloatImage, TFloatImage > BinaryThresholdImageFilterType;
-    BinaryThresholdImageFilterType::Pointer thresholdFilter = BinaryThresholdImageFilterType::New();
+    typename BinaryThresholdImageFilterType::Pointer thresholdFilter = BinaryThresholdImageFilterType::New();
     thresholdFilter->SetInput( resampleBinaryFilter->GetOutput() );
     thresholdFilter->SetLowerThreshold(0.5);
     thresholdFilter->SetUpperThreshold(1.0);
@@ -354,7 +355,11 @@ AirwaySurfaceWriter<TInputImage, TMaskImage>
 
   //Apply VTK Filter
   vtkSmartPointer<vtkContourFilter> contourFilter = vtkContourFilter::New();
+#if VTK_MAJOR_VERSION <= 5
+  contourFilter->SetInput(toVTKFilter->GetOutput());
+#else
   contourFilter->SetInputData(toVTKFilter->GetOutput());
+#endif
   contourFilter->SetValue(0, this->m_dThreshold);
   contourFilter->Update();
 
