@@ -20,13 +20,19 @@
 
 #include <itkImageIOBase.h>
 
+#ifdef _WIN32
+#define CORE_EXPORT __cdecl
+#else
+#define CORE_EXPORT
+#endif
+
 namespace AirwaySegmenter {
 
   /*******************************************************************/
   /** Query the image type. */
   /*******************************************************************/
-  void GetImageType ( std::string fileName,
-                      itk::ImageIOBase::IOPixelType & pixelType,
-                      itk::ImageIOBase::IOComponentType & componentType);
+  void CORE_EXPORT GetImageType ( std::string fileName,
+                                  itk::ImageIOBase::IOPixelType & pixelType,
+                                  itk::ImageIOBase::IOComponentType & componentType);
 
 } // end namespace AirwaySegmenter
