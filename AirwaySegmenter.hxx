@@ -60,6 +60,27 @@
 namespace AirwaySegmenter {
 
   /*******************************************************************/
+  /** Compute Otsu threshold of input image.
+  /*******************************************************************/
+  template< typename TImage >
+  typename TImage::Pointer OtsuThreshold( TImage* image, double insideValue, double outsideValue, double & threshold )
+  {
+    typedef itk::OtsuThresholdImageFilter< TImage, TImage > OtsuThresholdFilterType;
+    typename OtsuThresholdFilterType::Pointer otsuThresholdFilter = OtsuThresholdFilterType::New();
+    otsuThresholdFilter->SetInsideValue( insideValue );
+    otsuThresholdFilter->SetOutsideValue( outsideValue );
+    otsuThresholdFilter->SetInput( image );
+    TRY_UPDATE( otsuThresholdFilter );
+
+    threshold = otsuThresholdFilter->GetThreshold();
+
+    typename TImage::Pointer output = otsuThresholdFilter->GetOutput();
+    output->DisconnectPipeline();
+
+    return output;
+  }
+
+  /*******************************************************************/
   /** Run the algorithm on an input image and write it to the output
       image. */
   /*******************************************************************/
@@ -206,15 +227,10 @@ namespace AirwaySegmenter {
     }
 
     /* Initial Otsu threshold first to separate patient from background. */
-    typedef itk::OtsuThresholdImageFilter< InputImageType, LabelImageType > OtsuThresholdFilterType;
-    typename OtsuThresholdFilterType::Pointer otsuThresholdFilter = OtsuThresholdFilterType::New();
-    otsuThresholdFilter->SetInsideValue( 0 );
-    otsuThresholdFilter->SetOutsideValue( 1 );
-    otsuThresholdFilter->SetInput( originalImage );
-    TRY_UPDATE( otsuThresholdFilter );
-    DEBUG_WRITE_LABEL_IMAGE( otsuThresholdFilter );
+    double initialThreshold = 0.0;
+    typename InputImageType::Pointer otsuThreshold = OtsuThreshold( originalImage, 0, 1, initialThreshold );
 
-    std::cout << "Initial Otsu threshold: " << otsuThresholdFilter->GetThreshold() << std::endl;
+    std::cout << "Initial Otsu threshold: " << initialThreshold << std::endl;
 
     /* Dilation */
     typedef itk::PhysicalSpaceBinaryDilateImageFilter< LabelImageType, LabelImageType >
@@ -229,7 +245,7 @@ namespace AirwaySegmenter {
       // Initial erosion that removes narrow objects such as breathing masks
       typename ErodeFilterType::Pointer thinErosion = ErodeFilterType::New();
       thinErosion->SetErosionDistance( args.dBreathingMaskThickness );
-      thinErosion->SetInput( otsuThresholdFilter->GetOutput() );
+      thinErosion->SetInput( otsuThreshold );
       TRY_UPDATE( thinErosion );
       DEBUG_WRITE_LABEL_IMAGE( thinErosion );
 
@@ -241,7 +257,7 @@ namespace AirwaySegmenter {
 
       initialBinaryImage = airwayDilation->GetOutput();
     } else {
-      initialBinaryImage = otsuThresholdFilter->GetOutput();
+      initialBinaryImage = otsuThreshold;
     }
 
     /* Custom Fast marching */
@@ -301,10 +317,10 @@ namespace AirwaySegmenter {
     fastMarchingDilate->SetSpeedConstant( 1.0 );  // to solve a simple Eikonal equation
      // The FastMarchingImageFilter requires the user to specify the size of the image to be produced as
      // output. This is done using the SetOutputSize().
-    fastMarchingDilate->SetOutputSize( otsuThresholdFilter->GetOutput()->GetBufferedRegion().GetSize() );
-    fastMarchingDilate->SetOutputRegion( otsuThresholdFilter->GetOutput()->GetBufferedRegion() );
-    fastMarchingDilate->SetOutputSpacing( otsuThresholdFilter->GetOutput()->GetSpacing() );
-    fastMarchingDilate->SetOutputOrigin( otsuThresholdFilter->GetOutput()->GetOrigin() );
+    fastMarchingDilate->SetOutputSize( otsuThreshold->GetBufferedRegion().GetSize() );
+    fastMarchingDilate->SetOutputRegion( otsuThreshold->GetBufferedRegion() );
+    fastMarchingDilate->SetOutputSpacing( otsuThreshold->GetSpacing() );
+    fastMarchingDilate->SetOutputOrigin( otsuThreshold->GetOrigin() );
     fastMarchingDilate->SetStoppingValue( args.dErodeDistance + args.dMaxAirwayRadius+ 1 );
     TRY_UPDATE( fastMarchingDilate );
     DEBUG_WRITE_IMAGE( fastMarchingDilate );
@@ -391,7 +407,7 @@ namespace AirwaySegmenter {
     /* Difference between closed image and ostu-threshold of the original one */
     typedef itk::AbsoluteValueDifferenceImageFilter<LabelImageType, LabelImageType, LabelImageType > TAbsoluteValueDifferenceFilter;
     typename TAbsoluteValueDifferenceFilter::Pointer absoluteValueDifferenceFilter = TAbsoluteValueDifferenceFilter::New();
-    absoluteValueDifferenceFilter->SetInput1( otsuThresholdFilter->GetOutput() );
+    absoluteValueDifferenceFilter->SetInput1( otsuThreshold );
     absoluteValueDifferenceFilter->SetInput2( thresholdClosing->GetOutput() );
     TRY_UPDATE( absoluteValueDifferenceFilter );
     DEBUG_WRITE_LABEL_IMAGE( absoluteValueDifferenceFilter );
@@ -787,12 +803,8 @@ namespace AirwaySegmenter {
     }
 
     // Now apply an Otsu threshold on it.
-    typename OtsuThresholdFilterType::Pointer otsuThresholdBranchFilter = OtsuThresholdFilterType::New();
-    otsuThresholdBranchFilter->SetInsideValue(1);
-    otsuThresholdBranchFilter->SetOutsideValue(0);
-    otsuThresholdBranchFilter->SetInput( imageBranch );
-    TRY_UPDATE( otsuThresholdBranchFilter );
-    DEBUG_WRITE_LABEL_IMAGE( otsuThresholdBranchFilter );
+    double branchThresholdValue = 0.0;
+    typename InputImageType::Pointer otsuThresholdBranch = OtsuThreshold( imageBranch.GetPointer(), 1, 0, branchThresholdValue );
 
     if (args.bDebug) {
       std::cout << "Getting rid of the small lungs parts ... " << std::endl;
@@ -813,7 +825,7 @@ namespace AirwaySegmenter {
 
           if( iX * iX + iY * iY + iZ * iZ <= args.lowerSeedRadius * args.lowerSeedRadius ) {
             if( branchThreshold->GetOutput()->GetPixel( pixelIndexBranch ) &&
-                otsuThresholdBranchFilter->GetOutput()->GetPixel( pixelIndexBranch ) ) {
+                otsuThresholdBranch->GetPixel( pixelIndexBranch ) ) {
               imageBranch->SetPixel( pixelIndexBranch, 1 );
             }
           }
@@ -1106,7 +1118,7 @@ namespace AirwaySegmenter {
         MaskedOtsuThresholdFilterType::New();
       trachealTubeFilter->SetInsideValue( 0 );
       trachealTubeFilter->SetOutsideValue( 1 );
-      trachealTubeFilter->SetMaskImage( otsuThresholdFilter->GetOutput() );
+      trachealTubeFilter->SetMaskImage( otsuThreshold.GetPointer() );
       trachealTubeFilter->SetInput( originalImage );
       TRY_UPDATE( trachealTubeFilter );
       DEBUG_WRITE_LABEL_IMAGE( trachealTubeFilter );
