@@ -81,6 +81,30 @@ namespace AirwaySegmenter {
   }
 
   /*******************************************************************/
+  /** Binary threshold. */
+  /*******************************************************************/
+  template< typename TInputImage, typename TOutputImage >
+  typename TOutputImage::Pointer BinaryThreshold( TInputImage* input,
+                                                  double lowerThreshold, double upperThreshold,
+                                                  double outsideValue, double insideValue )
+  {
+    typedef itk::BinaryThresholdImageFilter< TInputImage, TOutputImage > ThresholdingFilterType;
+    typename ThresholdingFilterType::Pointer thresholdFilter = ThresholdingFilterType::New();
+    thresholdFilter->SetLowerThreshold( lowerThreshold );
+    thresholdFilter->SetUpperThreshold( upperThreshold );
+    thresholdFilter->SetOutsideValue( outsideValue );
+    thresholdFilter->SetInsideValue( insideValue );
+    thresholdFilter->SetInput( input );
+    TRY_UPDATE( thresholdFilter );
+
+    typename TOutputImage::Pointer output = thresholdFilter->GetOutput();
+    output->DisconnectPipeline();
+
+    return output;
+  }
+
+
+  /*******************************************************************/
   /** Run the algorithm on an input image and write it to the output
       image. */
   /*******************************************************************/
@@ -229,6 +253,7 @@ namespace AirwaySegmenter {
     /* Initial Otsu threshold first to separate patient from background. */
     double initialThreshold = 0.0;
     typename InputImageType::Pointer otsuThreshold = OtsuThreshold( originalImage, 0, 1, initialThreshold );
+    DEBUG_WRITE_LABEL_IMAGE_ONLY( otsuThreshold );
 
     std::cout << "Initial Otsu threshold: " << initialThreshold << std::endl;
 
@@ -325,15 +350,10 @@ namespace AirwaySegmenter {
     TRY_UPDATE( fastMarchingDilate );
     DEBUG_WRITE_IMAGE( fastMarchingDilate );
 
-    typedef itk::BinaryThresholdImageFilter< FloatImageType, LabelImageType > ThresholdingFilterType;
-    typename ThresholdingFilterType::Pointer thresholdDilation = ThresholdingFilterType::New();
-    thresholdDilation->SetLowerThreshold( 0.0 );
-    thresholdDilation->SetUpperThreshold( args.dMaxAirwayRadius );
-    thresholdDilation->SetOutsideValue( 0 );
-    thresholdDilation->SetInsideValue( 1 );
-    thresholdDilation->SetInput( fastMarchingDilate->GetOutput() );
-    TRY_UPDATE( thresholdDilation );
-    DEBUG_WRITE_LABEL_IMAGE( thresholdDilation );
+    typename LabelImageType::Pointer thresholdDilation =
+      BinaryThreshold< FloatImageType, LabelImageType >( fastMarchingDilate->GetOutput(),
+                                                         0.0, args.dMaxAirwayRadius, 0, 1 );
+    DEBUG_WRITE_LABEL_IMAGE_ONLY( thresholdDilation );
 
     /* Erosion (Thus creating a closing) */
 
@@ -346,7 +366,7 @@ namespace AirwaySegmenter {
     // and set all voxels to 0 seed voxels
     typedef itk::ImageRegionConstIterator< FloatImageType >  ConstFloatIteratorType;
     ConstFloatIteratorType floatDilatedImageIterator( fastMarchingDilate->GetOutput(), fastMarchingDilate->GetOutput()->GetLargestPossibleRegion() );
-    ConstIteratorType binaryDilatedImageIterator( thresholdDilation->GetOutput(), thresholdDilation->GetOutput()->GetLargestPossibleRegion() );
+    ConstIteratorType binaryDilatedImageIterator( thresholdDilation, thresholdDilation->GetLargestPossibleRegion() );
     uiNumberOfTrialSeeds = 0;
     uiNumberOfAliveSeeds = 0;
     floatDilatedImageIterator.GoToBegin();
@@ -376,23 +396,22 @@ namespace AirwaySegmenter {
     fastMarchingClose->SetAlivePoints( aliveSeeds );
     fastMarchingClose->SetInput( NULL );
     fastMarchingClose->SetSpeedConstant( 1.0 );  // To solve a simple Eikonal equation
-    fastMarchingClose->SetOutputSize( thresholdDilation->GetOutput()->GetBufferedRegion().GetSize() ); // The FastMarchingImageFilter requires the user to specify the size of the image to be produced as output. This is done using the SetOutputSize()
-    fastMarchingClose->SetOutputRegion( thresholdDilation->GetOutput()->GetBufferedRegion() );
-    fastMarchingClose->SetOutputSpacing( thresholdDilation->GetOutput()->GetSpacing() );
-    fastMarchingClose->SetOutputOrigin( thresholdDilation->GetOutput()->GetOrigin() );
+    fastMarchingClose->SetOutputSize( thresholdDilation->GetBufferedRegion().GetSize() ); // The FastMarchingImageFilter requires the user to specify the size of the image to be produced as output. This is done using the SetOutputSize()
+    fastMarchingClose->SetOutputRegion( thresholdDilation->GetBufferedRegion() );
+    fastMarchingClose->SetOutputSpacing( thresholdDilation->GetSpacing() );
+    fastMarchingClose->SetOutputOrigin( thresholdDilation->GetOrigin() );
 
     fastMarchingClose->SetStoppingValue( args.dErodeDistance + args.dMaxAirwayRadius+ 1 );
     TRY_UPDATE( fastMarchingClose );
     DEBUG_WRITE_IMAGE( fastMarchingClose );
 
-    typename ThresholdingFilterType::Pointer thresholdClosing = ThresholdingFilterType::New();
-    thresholdClosing->SetLowerThreshold( 0.0 );
-    thresholdClosing->SetUpperThreshold( args.dMaxAirwayRadius );
-    thresholdClosing->SetOutsideValue( 1 );
-    thresholdClosing->SetInsideValue( 0 );
-    thresholdClosing->SetInput( fastMarchingClose->GetOutput() );
-    TRY_UPDATE( thresholdClosing );
-    DEBUG_WRITE_LABEL_IMAGE( thresholdClosing );
+    // Done with thresholdDilation
+    thresholdDilation = NULL;
+
+    typename LabelImageType::Pointer thresholdClosing =
+      BinaryThreshold< FloatImageType, LabelImageType >( fastMarchingClose->GetOutput(),
+                                                         0.0, args.dMaxAirwayRadius, 1, 0 );
+    DEBUG_WRITE_LABEL_IMAGE_ONLY( thresholdClosing );
 
     typedef itk::MaskedOtsuThresholdImageFilter< InputImageType,
                                                  LabelImageType,
@@ -408,26 +427,24 @@ namespace AirwaySegmenter {
     typedef itk::AbsoluteValueDifferenceImageFilter<LabelImageType, LabelImageType, LabelImageType > TAbsoluteValueDifferenceFilter;
     typename TAbsoluteValueDifferenceFilter::Pointer absoluteValueDifferenceFilter = TAbsoluteValueDifferenceFilter::New();
     absoluteValueDifferenceFilter->SetInput1( otsuThreshold );
-    absoluteValueDifferenceFilter->SetInput2( thresholdClosing->GetOutput() );
+    absoluteValueDifferenceFilter->SetInput2( thresholdClosing );
     TRY_UPDATE( absoluteValueDifferenceFilter );
     DEBUG_WRITE_LABEL_IMAGE( absoluteValueDifferenceFilter );
 
+    // Done with thresholdClosing
+    thresholdClosing = NULL;
+
     /* Create a slightly eroded version of the closed image
      * This is to prevent any weird effects at the outside of the face */
-    typename ThresholdingFilterType::Pointer thresholdDifference = ThresholdingFilterType::New();
-    thresholdDifference->SetLowerThreshold( 0.0 ); // We can get this simply by taking a slightly different threshold for the marching in case
-    thresholdDifference->SetUpperThreshold( args.dMaxAirwayRadius+args.dErodeDistance );
-    thresholdDifference->SetOutsideValue( 1 );
-    thresholdDifference->SetInsideValue( 0 );
-    thresholdDifference->SetInput( thresholdClosing->GetInput() ); // The closed image was the input of the closing threshold (we don't want to re-run a fast marching)
-    TRY_UPDATE( thresholdDifference );
-    DEBUG_WRITE_LABEL_IMAGE( thresholdDifference );
+    typename LabelImageType::Pointer thresholdDifference =
+      BinaryThreshold< FloatImageType, LabelImageType >( fastMarchingClose->GetOutput(), 0.0, args.dMaxAirwayRadius + args.dErodeDistance, 1, 0 );
+    DEBUG_WRITE_LABEL_IMAGE_ONLY( thresholdDifference );
 
     /* The masking */
     typedef itk::MaskImageFilter<LabelImageType, LabelImageType, LabelImageType > TMaskImageFilter;
     typename TMaskImageFilter::Pointer absoluteValueDifferenceFilterMasked = TMaskImageFilter::New();
     absoluteValueDifferenceFilterMasked->SetInput1( absoluteValueDifferenceFilter->GetOutput() );
-    absoluteValueDifferenceFilterMasked->SetInput2( thresholdDifference->GetOutput() ); // Second input is the mask
+    absoluteValueDifferenceFilterMasked->SetInput2( thresholdDifference ); // Second input is the mask
     TRY_UPDATE( absoluteValueDifferenceFilterMasked );
     DEBUG_WRITE_LABEL_IMAGE( absoluteValueDifferenceFilterMasked );
 
@@ -523,21 +540,20 @@ namespace AirwaySegmenter {
 
     /* Now do another Otsu thresholding but just around the current segmentation. */
     /* For this, we need to make it first a little bit bigger */
-    typename ThresholdingFilterType::Pointer extendSegmentation =
-      ThresholdingFilterType::New();
-    extendSegmentation->SetInput( FastMarchIt<T>(firstCombineThresholdFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius) ); // There are enough few seeds that they can all be considered as part of the trial seeds
-    extendSegmentation->SetLowerThreshold( 0.0 );
-    extendSegmentation->SetUpperThreshold( (sqrt(2.0)-1)*args.dMaxAirwayRadius ); // To make sure we get roughly twice the volume if the object would have a circular cross section
-    extendSegmentation->SetOutsideValue( 0 );
-    extendSegmentation->SetInsideValue( 1 );
-    TRY_UPDATE( extendSegmentation );
-    DEBUG_WRITE_LABEL_IMAGE( extendSegmentation );
+    FloatImageType::Pointer fastMarchFirstCombineThresholdFilter =
+      FastMarchIt< T >( firstCombineThresholdFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius );
+
+    // To make sure we get roughly twice the volume if the object would have a circular cross section
+    double upperThreshold = (sqrt(2.0)-1)*args.dMaxAirwayRadius;
+    typename LabelImageType::Pointer extendSegmentation =
+      BinaryThreshold< FloatImageType, LabelImageType >( fastMarchFirstCombineThresholdFilter, 0.0, upperThreshold, 0, 1 );
+    DEBUG_WRITE_LABEL_IMAGE_ONLY( extendSegmentation );
 
     /* Now do another Otsu thresholding but restrict the statistics to the currently obtained area  (custom ostu-threshold filter) */
     typename MaskedOtsuThresholdFilterType::Pointer maskedOtsuThresholdFilter = MaskedOtsuThresholdFilterType::New();
     maskedOtsuThresholdFilter->SetInsideValue( 1 );
     maskedOtsuThresholdFilter->SetOutsideValue( 0 );
-    maskedOtsuThresholdFilter->SetMaskImage( extendSegmentation->GetOutput() );
+    maskedOtsuThresholdFilter->SetMaskImage( extendSegmentation.GetPointer() );
     maskedOtsuThresholdFilter->SetInput( originalImage );
     TRY_UPDATE( maskedOtsuThresholdFilter );
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsuThresholdFilter );
@@ -547,7 +563,7 @@ namespace AirwaySegmenter {
     // by the bounds of the patient.
     typename TMaskImageFilter::Pointer maskedOtsu = TMaskImageFilter::New();
     maskedOtsu->SetInput1( maskedOtsuThresholdFilter->GetOutput() );
-    maskedOtsu->SetInput2( thresholdDifference->GetOutput() ); // Second input is the  mask
+    maskedOtsu->SetInput2( thresholdDifference ); // Second input is the  mask
     TRY_UPDATE( maskedOtsu );
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsu );
 
@@ -985,15 +1001,10 @@ namespace AirwaySegmenter {
        * Note that the erosion is very small
        * Using custom fast marching function
        */
-      typename ThresholdingFilterType::Pointer thresholdSlightErosion = ThresholdingFilterType::New();
-      thresholdSlightErosion->SetLowerThreshold( args.dMaxAirwayRadius*args.erosionPercentage ); //Should be set ?
-      thresholdSlightErosion->SetUpperThreshold( args.dMaxAirwayRadius );
-      thresholdSlightErosion->SetOutsideValue( 0 );
-      thresholdSlightErosion->SetInsideValue( 1 );
-
-      thresholdSlightErosion->SetInput( FastMarchIt<T>( finalSegmentation, "In", args.dErodeDistance, args.dMaxAirwayRadius));
-      thresholdSlightErosion->Update();
-      DEBUG_WRITE_LABEL_IMAGE( thresholdSlightErosion );
+      typename LabelImageType::Pointer thresholdSlightErosion =
+        BinaryThreshold< FloatImageType, LabelImageType >( FastMarchIt< T >( finalSegmentation, "In", args.dErodeDistance, args.dMaxAirwayRadius),
+                         args.dMaxAirwayRadius*args.erosionPercentage, args.dMaxAirwayRadius, 0, 1 );
+      DEBUG_WRITE_LABEL_IMAGE_ONLY( thresholdSlightErosion );
 
       /* Create the image that we will substract from the segmentation
        * It should be all the maxillary sinuses
@@ -1002,7 +1013,7 @@ namespace AirwaySegmenter {
       typename ConnectedComponentType::Pointer connectedSinuses = ConnectedComponentType::New();
       typename RelabelComponentType::Pointer relabelSinuses = RelabelComponentType::New();
 
-      connectedSinuses->SetInput( thresholdSlightErosion->GetOutput() );
+      connectedSinuses->SetInput( thresholdSlightErosion );
       relabelSinuses->SetInput( connectedSinuses->GetOutput() );
       relabelSinuses->SetNumberOfObjectsToPrint( 5 );
       try {
@@ -1013,6 +1024,9 @@ namespace AirwaySegmenter {
         std::cerr << "Exception caught !" << std::endl;
         std::cerr << excep << std::endl;
       }
+
+      // Done with thresholdSlightErosion
+      thresholdSlightErosion = NULL;
 
       typedef typename itk::AddImageFilter< LabelImageType > AddLabelImageFilterType;
       typedef itk::BinaryThresholdImageFilter<LabelImageType, LabelImageType > LabelThresholdFilterType;
@@ -1061,23 +1075,21 @@ namespace AirwaySegmenter {
        * Note that the erosion is very small
        * Using custom fast marching function
        */
-      typename ThresholdingFilterType::Pointer thresholdSlightDilation = ThresholdingFilterType::New();
-
-      thresholdSlightDilation->SetLowerThreshold( 0 );
-      thresholdSlightDilation->SetUpperThreshold( args.dMaxAirwayRadius*args.erosionPercentage ); //Should be set ?
-      thresholdSlightDilation->SetOutsideValue( 1 );
-      thresholdSlightDilation->SetInsideValue( 0 );
-      thresholdSlightDilation->SetInput( FastMarchIt<T>( addFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius));
-      TRY_UPDATE( thresholdSlightDilation );
-      DEBUG_WRITE_LABEL_IMAGE( thresholdSlightDilation );
+      typename LabelImageType::Pointer thresholdSlightDilation =
+        BinaryThreshold< FloatImageType, LabelImageType >( FastMarchIt<T>( addFilter->GetOutput(), "Out", args.dErodeDistance, args.dMaxAirwayRadius),
+                                                           0, args.dMaxAirwayRadius * args.erosionPercentage, 1, 0 );
+      DEBUG_WRITE_LABEL_IMAGE_ONLY( thresholdSlightDilation );
 
       /* Mask all the undesired part from the segmentation */
       typename TMaskImageFilter::Pointer substractSinusesMask = TMaskImageFilter::New();
-      substractSinusesMask->SetMaskImage( thresholdSlightDilation->GetOutput() );
+      substractSinusesMask->SetMaskImage( thresholdSlightDilation );
       substractSinusesMask->SetInput( finalSegmentation );
       substractSinusesMask->Update();
       TRY_UPDATE( substractSinusesMask );
       DEBUG_WRITE_LABEL_IMAGE( substractSinusesMask );
+
+      // Done with thresholdSlightDilation
+      thresholdSlightDilation = NULL;
 
       /* Clean up */
 
