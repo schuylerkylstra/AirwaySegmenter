@@ -106,20 +106,113 @@ namespace AirwaySegmenter {
   /*******************************************************************/
   /** Mask image. **/
   /*******************************************************************/
-  template< typename TImageType, typename TMaskImageType >
-  typename TImageType::Pointer MaskFilter( TImageType* input,
-                                           TImageType* maskImage )
+  template< typename TInputImage, typename TMaskImage >
+  typename TInputImage::Pointer MaskFilter( TInputImage* input,
+                                            TInputImage* maskImage )
   {
-    typedef itk::MaskImageFilter< TImageType, TMaskImageType, TImageType > TMaskImageFilter;
+    typedef itk::MaskImageFilter< TInputImage, TMaskImage, TInputImage > TMaskImageFilter;
     typename TMaskImageFilter::Pointer maskFilter = TMaskImageFilter::New();
     maskFilter->SetInput1( input );
     maskFilter->SetInput2( maskImage );
     TRY_UPDATE( maskFilter );
 
-    typename TImageType::Pointer output = maskFilter->GetOutput();
+    typename TInputImage::Pointer output = maskFilter->GetOutput();
     output->DisconnectPipeline();
 
     return output;
+  }
+
+  /*******************************************************************/
+  /** Remove trachea tube. */
+  /*******************************************************************/
+  template< typename TInputImage, typename TLabelImage >
+  void RemoveTrachealTube( const ProgramArguments & args,
+                           TInputImage* originalImage,
+                           TLabelImage* otsuThreshold,
+                           TLabelImage* finalSegmentation )
+  {
+    // Do another Otsu threshold on the patient masked region only.
+    // This should separate high-intensity objects such as bones and
+    // tracheal tubes from the rest of the body.
+    typedef itk::MaskedOtsuThresholdImageFilter< TInputImage,
+                                                 TLabelImage,
+                                                 TLabelImage > MaskedOtsuThresholdFilterType;
+    typedef itk::ConnectedComponentImageFilter< TLabelImage,
+                                                TLabelImage >  ConnectedComponentType;
+    typedef itk::RelabelComponentImageFilter< TLabelImage,
+                                              TLabelImage >    RelabelComponentType;
+    typedef itk::BinaryThresholdImageFilter< TLabelImage,
+                                             TLabelImage >     FinalThresholdingFilterType;
+
+    typename MaskedOtsuThresholdFilterType::Pointer trachealTubeFilter =
+      MaskedOtsuThresholdFilterType::New();
+    trachealTubeFilter->SetInsideValue( 0 );
+    trachealTubeFilter->SetOutsideValue( 1 );
+    trachealTubeFilter->SetMaskImage( otsuThreshold );
+    trachealTubeFilter->SetInput( originalImage );
+    trachealTubeFilter->ReleaseDataFlagOn();
+
+    typename ConnectedComponentType::Pointer trachealConnected = ConnectedComponentType::New();
+    trachealConnected->SetInput( trachealTubeFilter->GetOutput() );
+    trachealConnected->ReleaseDataFlagOn();
+
+    typename RelabelComponentType::Pointer trachealRelabel = RelabelComponentType::New();
+    trachealRelabel->SetNumberOfObjectsToPrint( 5 );
+    trachealRelabel->SetInput( trachealConnected->GetOutput() );
+
+    int componentNumber =
+      LabelIt< typename TInputImage::PixelType >( trachealRelabel->GetOutput(),
+                                                  args.trachealTubeSeed,
+                                                  args.trachealTubeSeedRadius,
+                                                  args.bDebug );
+
+    trachealRelabel->ReleaseDataFlagOn();
+    typename FinalThresholdingFilterType::Pointer trachealLargestComponentThreshold = FinalThresholdingFilterType::New();
+    trachealLargestComponentThreshold->SetInput( trachealRelabel->GetOutput() );
+    trachealLargestComponentThreshold->SetLowerThreshold( componentNumber );
+    trachealLargestComponentThreshold->SetUpperThreshold( componentNumber );
+    trachealLargestComponentThreshold->SetInsideValue( 1 );
+    trachealLargestComponentThreshold->SetOutsideValue( 0 );
+    trachealLargestComponentThreshold->ReleaseDataFlagOn();
+
+    // Morphological closing to fill in the center of the tracheal tube.
+    typedef itk::PhysicalSpaceBinaryDilateImageFilter< TLabelImage, TLabelImage >
+      DilateFilterType;
+    double closingDistance = 5.0; // mm
+    typename DilateFilterType::Pointer trachealDilate = DilateFilterType::New();
+    trachealDilate->SetDilationDistance( closingDistance );
+    trachealDilate->SetInput( trachealLargestComponentThreshold->GetOutput() );
+    trachealDilate->ReleaseDataFlagOn();
+
+    typedef itk::PhysicalSpaceBinaryErodeImageFilter< TLabelImage, TLabelImage >
+      ErodeFilterType;
+    typename ErodeFilterType::Pointer trachealErode = ErodeFilterType::New();
+    trachealErode->SetErosionDistance( closingDistance - args.trachealTubeDilationDistance );
+    trachealErode->SetInput( trachealDilate->GetOutput() );
+
+    // Iterate over the closed tracheal tube mask and make it part of the airway.
+    typedef itk::ImageRegionConstIterator< TLabelImage > ConstIteratorType;
+    ConstIteratorType trachealIterator( trachealErode->GetOutput(),
+                                        trachealErode->GetOutput()->GetLargestPossibleRegion() );
+
+    typedef itk::ImageRegionIterator< TLabelImage > IteratorType;
+    IteratorType finalIterator( finalSegmentation,
+                                finalSegmentation->GetLargestPossibleRegion() );
+
+    typedef itk::ImageRegionIterator< TInputImage > InputIteratorType;
+    InputIteratorType inputIterator( originalImage, originalImage->GetLargestPossibleRegion() );
+    for ( trachealIterator.GoToBegin(),
+          finalIterator.GoToBegin(),
+          inputIterator.GoToBegin();
+          !trachealIterator.IsAtEnd();
+          ++trachealIterator,
+          ++finalIterator,
+          ++inputIterator ) {
+      if ( trachealIterator.Get() > 0 ) {
+        finalIterator.Set( 1 );
+        inputIterator.Set( -1024 );
+      }
+    }
   }
 
   /*******************************************************************/
@@ -997,7 +1090,6 @@ namespace AirwaySegmenter {
     finalFragmentCombineFilter->SetInput2( finalFragmentFilter->GetOutput() );
     TRY_UPDATE( finalFragmentCombineFilter );
     DEBUG_WRITE_LABEL_IMAGE( finalFragmentCombineFilter );
-    DEBUG_WRITE_LABEL_IMAGE( finalFragmentCombineFilter );
 
     typename FinalThresholdingFilterType::Pointer finalCombineThresholdFilter =
       FinalThresholdingFilterType::New();
@@ -1143,75 +1235,7 @@ namespace AirwaySegmenter {
 
     // Optionally remove tracheal tube
     if ( args.bRemoveTrachealTube && args.trachealTubeSeed.size() >= 3 ) {
-      // Do another Otsu threshold on the patient masked region only.
-      // This should separate high-intensity objects such as bones and
-      // tracheal tubes from the rest of the body.
-      typename MaskedOtsuThresholdFilterType::Pointer trachealTubeFilter =
-        MaskedOtsuThresholdFilterType::New();
-      trachealTubeFilter->SetInsideValue( 0 );
-      trachealTubeFilter->SetOutsideValue( 1 );
-      trachealTubeFilter->SetMaskImage( otsuThreshold.GetPointer() );
-      trachealTubeFilter->SetInput( originalImage );
-      TRY_UPDATE( trachealTubeFilter );
-      DEBUG_WRITE_LABEL_IMAGE( trachealTubeFilter );
-
-      typename ConnectedComponentType::Pointer trachealConnected = ConnectedComponentType::New();
-      trachealConnected->SetInput( trachealTubeFilter->GetOutput() );
-      TRY_UPDATE( trachealConnected );
-      DEBUG_WRITE_LABEL_IMAGE( trachealConnected );
-
-      typename RelabelComponentType::Pointer trachealRelabel = RelabelComponentType::New();
-      trachealRelabel->SetNumberOfObjectsToPrint( 5 );
-      trachealRelabel->SetInput( trachealConnected->GetOutput() );
-      TRY_UPDATE( trachealRelabel );
-      DEBUG_WRITE_LABEL_IMAGE( trachealRelabel );
-
-      int componentNumber = LabelIt< T >( trachealRelabel->GetOutput(),
-                                          args.trachealTubeSeed,
-                                          args.trachealTubeSeedRadius,
-                                          args.bDebug );
-
-      typename FinalThresholdingFilterType::Pointer trachealLargestComponentThreshold = FinalThresholdingFilterType::New();
-      trachealLargestComponentThreshold->SetInput( trachealRelabel->GetOutput() );
-      trachealLargestComponentThreshold->SetLowerThreshold( componentNumber );
-      trachealLargestComponentThreshold->SetUpperThreshold( componentNumber );
-      trachealLargestComponentThreshold->SetInsideValue( 1 );
-      trachealLargestComponentThreshold->SetOutsideValue( 0 );
-      TRY_UPDATE( trachealLargestComponentThreshold );
-      DEBUG_WRITE_LABEL_IMAGE( trachealLargestComponentThreshold );
-
-      // Morphological closing to fill in the center of the tracheal tube.
-      double closingDistance = 5.0; // mm
-      typename DilateFilterType::Pointer trachealDilate = DilateFilterType::New();
-      trachealDilate->SetDilationDistance( closingDistance );
-      trachealDilate->SetInput( trachealLargestComponentThreshold->GetOutput() );
-      TRY_UPDATE( trachealDilate );
-      DEBUG_WRITE_LABEL_IMAGE( trachealDilate );
-
-      typename ErodeFilterType::Pointer trachealErode = ErodeFilterType::New();
-      trachealErode->SetErosionDistance( closingDistance - args.trachealTubeDilationDistance );
-      trachealErode->SetInput( trachealDilate->GetOutput() );
-      TRY_UPDATE( trachealErode );
-      DEBUG_WRITE_LABEL_IMAGE( trachealErode );
-
-      // Iterate over the closed tracheal tube mask and make it part of the airway.
-      ConstIteratorType trachealIterator( trachealErode->GetOutput(),
-                                          trachealErode->GetOutput()->GetLargestPossibleRegion() );
-      IteratorType finalIterator( finalSegmentation,
-                                  finalSegmentation->GetLargestPossibleRegion() );
-      InputIteratorType inputIterator( originalImage, originalImage->GetLargestPossibleRegion() );
-      for ( trachealIterator.GoToBegin(),
-            finalIterator.GoToBegin(),
-            inputIterator.GoToBegin();
-            !trachealIterator.IsAtEnd();
-            ++trachealIterator,
-            ++finalIterator,
-            ++inputIterator ) {
-        if ( trachealIterator.Get() > 0 ) {
-          finalIterator.Set( 1 );
-          inputIterator.Set( -1024 );
-        }
-      }
+      RemoveTrachealTube( args, originalImage, otsuThreshold.GetPointer(), finalSegmentation.GetPointer() );
     }
 
     output = finalSegmentation;
