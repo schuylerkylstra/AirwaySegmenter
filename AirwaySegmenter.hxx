@@ -103,6 +103,24 @@ namespace AirwaySegmenter {
     return output;
   }
 
+  /*******************************************************************/
+  /** Mask image. **/
+  /*******************************************************************/
+  template< typename TImageType, typename TMaskImageType >
+  typename TImageType::Pointer MaskFilter( TImageType* input,
+                                           TImageType* maskImage )
+  {
+    typedef itk::MaskImageFilter< TImageType, TMaskImageType, TImageType > TMaskImageFilter;
+    typename TMaskImageFilter::Pointer maskFilter = TMaskImageFilter::New();
+    maskFilter->SetInput1( input );
+    maskFilter->SetInput2( maskImage );
+    TRY_UPDATE( maskFilter );
+
+    typename TImageType::Pointer output = maskFilter->GetOutput();
+    output->DisconnectPipeline();
+
+    return output;
+  }
 
   /*******************************************************************/
   /** Run the algorithm on an input image and write it to the output
@@ -441,12 +459,10 @@ namespace AirwaySegmenter {
     DEBUG_WRITE_LABEL_IMAGE_ONLY( thresholdDifference );
 
     /* The masking */
-    typedef itk::MaskImageFilter<LabelImageType, LabelImageType, LabelImageType > TMaskImageFilter;
-    typename TMaskImageFilter::Pointer absoluteValueDifferenceFilterMasked = TMaskImageFilter::New();
-    absoluteValueDifferenceFilterMasked->SetInput1( absoluteValueDifferenceFilter->GetOutput() );
-    absoluteValueDifferenceFilterMasked->SetInput2( thresholdDifference ); // Second input is the mask
-    TRY_UPDATE( absoluteValueDifferenceFilterMasked );
-    DEBUG_WRITE_LABEL_IMAGE( absoluteValueDifferenceFilterMasked );
+    typename LabelImageType::Pointer absoluteValueDifferenceFilterMasked =
+      MaskFilter< LabelImageType, LabelImageType >( absoluteValueDifferenceFilter->GetOutput(),
+                                                    thresholdDifference.GetPointer() );
+    DEBUG_WRITE_LABEL_IMAGE_ONLY( absoluteValueDifferenceFilterMasked );
 
     /* Extract largest component of the difference */
     if (args.bDebug) {
@@ -457,9 +473,12 @@ namespace AirwaySegmenter {
     typename RelabelComponentType::Pointer relabel = RelabelComponentType::New();
     typename FinalThresholdingFilterType::Pointer largestComponentThreshold = FinalThresholdingFilterType::New();
 
-    connected->SetInput ( absoluteValueDifferenceFilterMasked->GetOutput());
+    connected->SetInput( absoluteValueDifferenceFilterMasked );
     TRY_UPDATE( connected );
     DEBUG_WRITE_LABEL_IMAGE( connected );
+
+    // Done with absoluteValueDifferenceFilterMasked
+    absoluteValueDifferenceFilterMasked = NULL;
 
     // Label the components in the image and relabel them so that object numbers
     // increase as the size of the objects decrease.
@@ -561,11 +580,9 @@ namespace AirwaySegmenter {
 
     // Masked Otsu filter above does a whole-image thresholding, so mask it here
     // by the bounds of the patient.
-    typename TMaskImageFilter::Pointer maskedOtsu = TMaskImageFilter::New();
-    maskedOtsu->SetInput1( maskedOtsuThresholdFilter->GetOutput() );
-    maskedOtsu->SetInput2( thresholdDifference ); // Second input is the  mask
-    TRY_UPDATE( maskedOtsu );
-    DEBUG_WRITE_LABEL_IMAGE( maskedOtsu );
+    typename LabelImageType::Pointer maskedOtsu =
+      MaskFilter< LabelImageType, LabelImageType >( maskedOtsuThresholdFilter->GetOutput(), thresholdDifference );
+    DEBUG_WRITE_LABEL_IMAGE_ONLY( maskedOtsu );
 
     airwayThreshold = dThreshold;
 
@@ -660,9 +677,9 @@ namespace AirwaySegmenter {
             pixelIndex[1] = iJ;
             pixelIndex[2] = iK;
 
-            if( maskedOtsu->GetOutput()->GetPixel(pixelIndex) )
+            if( maskedOtsu->GetPixel(pixelIndex) )
             {
-              maskedOtsu->GetOutput()->SetPixel(pixelIndex, 0);
+              maskedOtsu->SetPixel(pixelIndex, 0);
               imageBranch->SetPixel( pixelIndexBranch, 1 );
             }
           }
@@ -762,9 +779,12 @@ namespace AirwaySegmenter {
 
     typename ConnectedComponentType::Pointer connectedFinalWithoutLung = ConnectedComponentType::New();
     typename RelabelComponentType::Pointer relabelFinalWithoutLung = RelabelComponentType::New();
-    connectedFinalWithoutLung->SetInput( maskedOtsu->GetOutput() );
+    connectedFinalWithoutLung->SetInput( maskedOtsu );
     TRY_UPDATE( connectedFinalWithoutLung );
     DEBUG_WRITE_LABEL_IMAGE( connectedFinalWithoutLung );
+
+    // Done with maskedOtsu
+    maskedOtsu = NULL;
 
     relabelFinalWithoutLung->SetInput( connectedFinalWithoutLung->GetOutput() );
     relabelFinalWithoutLung->SetNumberOfObjectsToPrint( 5 );
@@ -1081,12 +1101,9 @@ namespace AirwaySegmenter {
       DEBUG_WRITE_LABEL_IMAGE_ONLY( thresholdSlightDilation );
 
       /* Mask all the undesired part from the segmentation */
-      typename TMaskImageFilter::Pointer substractSinusesMask = TMaskImageFilter::New();
-      substractSinusesMask->SetMaskImage( thresholdSlightDilation );
-      substractSinusesMask->SetInput( finalSegmentation );
-      substractSinusesMask->Update();
-      TRY_UPDATE( substractSinusesMask );
-      DEBUG_WRITE_LABEL_IMAGE( substractSinusesMask );
+      typename LabelImageType::Pointer subtractSinusesMask =
+        MaskFilter< LabelImageType, LabelImageType >( finalSegmentation, thresholdSlightDilation );
+      DEBUG_WRITE_LABEL_IMAGE_ONLY( subtractSinusesMask );
 
       // Done with thresholdSlightDilation
       thresholdSlightDilation = NULL;
@@ -1096,11 +1113,14 @@ namespace AirwaySegmenter {
       typename ConnectedComponentType::Pointer connectedCleanUp = ConnectedComponentType::New();
       typename RelabelComponentType::Pointer relabelCleanUp = RelabelComponentType::New();
 
-      connectedCleanUp->SetInput( substractSinusesMask->GetOutput() );
+      connectedCleanUp->SetInput( subtractSinusesMask );
       relabelCleanUp->SetInput( connectedCleanUp->GetOutput() );
       relabelCleanUp->SetNumberOfObjectsToPrint( 5 );
       TRY_UPDATE( relabelCleanUp );
       DEBUG_WRITE_LABEL_IMAGE( relabelCleanUp );
+
+      // Done with subtractSinusesMask
+      subtractSinusesMask = NULL;
 
       nNumAirway = LabelIt<T>(relabelCleanUp->GetOutput(), args.upperSeed, args.upperSeedRadius, args.bDebug);
 
