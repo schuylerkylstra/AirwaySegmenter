@@ -20,16 +20,13 @@
 
 #include <itkImageIOBase.h>
 
-#include "vtkSlicerBaseCLIWin32Header.h"
-
 namespace AirwaySegmenter {
 
   /*******************************************************************/
   /** Query the image type. */
   /*******************************************************************/
-  void VTK_SLICER_BASE_CLI_EXPORT
-  GetImageType ( std::string fileName,
-                 itk::ImageIOBase::IOPixelType & pixelType,
-                 itk::ImageIOBase::IOComponentType & componentType);
+  void GetImageType ( std::string fileName,
+                      itk::ImageIOBase::IOPixelType & pixelType,
+                      itk::ImageIOBase::IOComponentType & componentType);
 
 } // end namespace AirwaySegmenter
