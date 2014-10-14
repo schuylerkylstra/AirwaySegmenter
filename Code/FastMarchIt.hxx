@@ -87,7 +87,10 @@ namespace AirwaySegmenter {
 
     TRY_UPDATE( fastMarching );
 
-    return fastMarching->GetOutput();
+    FloatImageType::Pointer outputImage = fastMarching->GetOutput();
+    outputImage->DisconnectPipeline();
+
+    return outputImage;
   }
 
 } // end namespace AirwaySegmenter
