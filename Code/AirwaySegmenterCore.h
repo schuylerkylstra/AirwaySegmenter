@@ -21,10 +21,12 @@
 #include <itkImageIOBase.h>
 
 #ifdef _WIN32
-#define CORE_EXPORT __cdecl
+#ifdef DLL_EXPORT
+#define CORE_EXPORT __declspec(dllexport)
 #else
-#define CORE_EXPORT
-#endif
+#define CORE_EXPORT __declspec(dllimport)
+#endif // DLL_EXPORT
+#endif // _WIN32
 
 namespace AirwaySegmenter {
 

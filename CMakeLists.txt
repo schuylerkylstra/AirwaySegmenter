@@ -44,6 +44,7 @@ set( AirwaySegmenterCoreLib_SRCS
 
 add_library( AirwaySegmenterCore ${AirwaySegmenterCoreLib_SRCS} )
 target_link_libraries(AirwaySegmenterCore ${ITK_LIBRARIES})
+set(CMAKE_SHARED_LINKER_FLAGS -DDLL_EXPORT)
 
 #Finally the projects
 SEMMacroBuildCLI(
