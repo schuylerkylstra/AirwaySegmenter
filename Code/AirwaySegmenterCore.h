@@ -26,6 +26,8 @@
 #else
 #define CORE_EXPORT __declspec(dllimport)
 #endif // DLL_EXPORT
+#else // _WIN32
+#define CORE_EXPORT
 #endif // _WIN32
 
 namespace AirwaySegmenter {
