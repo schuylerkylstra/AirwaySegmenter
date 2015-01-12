@@ -11,7 +11,6 @@ include(${ITK_USE_FILE})
 
 find_package(SlicerExecutionModel REQUIRED)
 include(${SlicerExecutionModel_USE_FILE})
-0
 
 find_package(VTK REQUIRED)
 
