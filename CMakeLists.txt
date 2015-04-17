@@ -77,6 +77,15 @@ SEMMacroBuildCLI(
                    ${ITK_LIBRARIES}
   EXECUTABLE_ONLY
 )
+
+SEMMacroBuildCLI(
+  NAME AirwaySegmenterArgs
+  TARGET_LIBRARIES AirwaySegmenterCore
+                   ${ITK_LIBRARIES}
+                   ${ItkVtkGlue_LIBRARIES}
+                   ${VTK_LIBRARIES}
+  EXECUTABLE_ONLY
+)
   
 #Testing
 OPTION(BUILD_TESTING "Build tests." ON)
