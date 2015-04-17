@@ -94,8 +94,9 @@ namespace AirwaySegmenterArgs
       argsFile << " --trachealTubeSeed " << args.trachealTubeSeed[0] << ","
                                          << args.trachealTubeSeed[1] << ","
                                          << args.trachealTubeSeed[2];
+      argsFile << " --trachealTubeSeedRadius " << args.trachealTubeSeedRadius;
     }
-    argsFile << " --trachealTubeSeedRadius " << args.trachealTubeSeedRadius;
+    
 
     if (args.bRemoveMaxillarySinuses) {
       argsFile << " --removeMaxillarySinuses";
@@ -120,11 +121,11 @@ namespace AirwaySegmenterArgs
     argsFile << " --noWarning";
     if(args.bRAIImage){
       argsFile << " --RAIImage";
-      argsFile << " --RAIImagePath " << args.sRAIImagePath << "nrrd";
+      argsFile << " --RAIImagePath " << args.sRAIImagePath;
     }
-    argsFile << args.inputImage << " ";
-    argsFile << args.outputImage<< " ";
-    argsFile << args.outputGeometry;
+    argsFile << " " << args.inputImage << " ";
+    argsFile << " " << args.outputImage<< " ";
+    argsFile << " " << args.outputGeometry;
     
     argsFile.close();
     return EXIT_SUCCESS;
