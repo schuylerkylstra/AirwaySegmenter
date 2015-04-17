@@ -46,6 +46,7 @@
             <label>Args File</label>
             <channel>output</channel>
             <index>3</index>
+            <default>None</default>
             <description><![CDATA[Location to store args for Airway Segmentation call.]]></description>
         </string>
     </parameters>

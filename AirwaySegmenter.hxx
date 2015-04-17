@@ -120,7 +120,7 @@ namespace AirwaySegmenter {
       argsFile << " --RAIImage";
       argsFile << " --RAIImagePath " << args.sRAIImagePath;
     }
-    
+
     argsFile.close();
   }
 
@@ -135,8 +135,9 @@ namespace AirwaySegmenter {
                itk::SmartPointer< TInput > & resampledInput,
                typename TInput::PixelType & airwayThreshold )
   {
-
-    StoreArgs(args);
+    if (args.argsFile != "None"){
+      StoreArgs(args);
+    }
     /* Typedefs */
     typedef float                      TFloatType;
     typedef typename TInput::PixelType T;
