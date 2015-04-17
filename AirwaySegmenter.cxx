@@ -106,7 +106,8 @@ namespace
     std::cout << "bRAIImage                    = " << bRAIImage << std::endl;
     std::cout << "sRAIImagePath                = " << sRAIImagePath << std::endl;
     std::cout << "----------------------------------------------------------------------------------" << std::endl;
-
+    std::cout << "argsFile                     = " << argsFile << std::endl;
+    std::cout << "----------------------------------------------------------------------------------" << std::endl;
     return 0;
   }
 
@@ -121,6 +122,7 @@ int main( int argc, char * argv[] )
   AirwaySegmenter::ProgramArguments args;
   args.inputImage           = inputImage;
   args.outputImage          = outputImage;
+  args.argsFile             = argsFile;
   args.createGeometry       = createGeometry;
   args.outputGeometry       = outputGeometry;
   args.returnParameterFile = returnParameterFile;

@@ -41,6 +41,13 @@
           <index>2</index>
           <description><![CDATA[Segmented surface image.]]></description>
         </geometry>
+        <string>
+            <name>argsFile</name>
+            <label>Args File</label>
+            <channel>output</channel>
+            <index>3</index>
+            <description><![CDATA[Location to store args for Airway Segmentation call.]]></description>
+        </string>
     </parameters>
     <parameters>
         <label>Segmentation Seeds</label>

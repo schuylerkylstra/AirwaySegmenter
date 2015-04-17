@@ -29,6 +29,7 @@ class ProgramArguments {
 public:
   std::string inputImage;
   std::string outputImage;
+  std::string argsFile;
   bool        createGeometry;
   std::string outputGeometry;
   std::string returnParameterFile;
