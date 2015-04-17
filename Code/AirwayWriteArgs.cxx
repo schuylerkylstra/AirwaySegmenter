@@ -9,7 +9,7 @@ namespace AirwaySegmenter {
     argsFile.open(args.argsFile.c_str()); 
 
     
-    argsFile << " --createOutputGeometry";
+    argsFile << "--createOutputGeometry";
 
     argsFile << " --lowerSeed " << args.lowerSeed[0] << ","
                                 << args.lowerSeed[1] << ","
@@ -48,7 +48,7 @@ namespace AirwaySegmenter {
         << args.maxillarySinusesSeeds[i][1] << ","
         << args.maxillarySinusesSeeds[i][2];
     }
-    argsFile << " --maxillarySinusesSeedsRadius " << args.maxillarySinusesSeedsRadius;
+    argsFile << " --maxillarySinusesRadius " << args.maxillarySinusesSeedsRadius;
 
     argsFile << " --erosionPercentage " << args.erosionPercentage;
     argsFile << " --maxAirwayRadius " << args.dMaxAirwayRadius;
