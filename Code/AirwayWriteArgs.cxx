@@ -32,7 +32,7 @@ namespace AirwaySegmenter {
       }
     }
     if (args.bRemoveTrachealTube) {
-      argsFile << " --removeTrachealTube"
+      argsFile << " --removeTrachealTube";
       argsFile << " --trachealTubeSeed " << args.trachealTubeSeed[0] << ","
                                          << args.trachealTubeSeed[1] << ","
                                          << args.trachealTubeSeed[2];
@@ -49,7 +49,7 @@ namespace AirwaySegmenter {
           << args.maxillarySinusesSeeds[i][1] << ","
           << args.maxillarySinusesSeeds[i][2];
       }
-	}
+    }
 
     argsFile << " --maxillarySinusesRadius " << args.maxillarySinusesSeedsRadius;
 
@@ -59,7 +59,7 @@ namespace AirwaySegmenter {
     argsFile << " --component " << args.iComponent;
     
     if(args.bRemoveBreathingMask){
-	  argsFile << " --removeBreathingMask"
+	  argsFile << " --removeBreathingMask";
       argsFile << " --breathingMaskThickness " << args.dBreathingMaskThickness;
     }
     

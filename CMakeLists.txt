@@ -43,7 +43,6 @@ include_directories(
 set( AirwaySegmenterCoreLib_SRCS
   Code/AirwaySegmenterCore.h
   Code/AirwaySegmenterCore.cxx
-
   Code/AirwayWriteArgs.h
   Code/AirwayWriteArgs.cxx
 )
@@ -60,7 +59,6 @@ set(CMAKE_SHARED_LINKER_FLAGS -DDLL_EXPORT)
 SEMMacroBuildCLI(
   NAME ${PROJECT_NAME}
   TARGET_LIBRARIES AirwaySegmenterCore
-                   AirwayWriteArgs
                    ${ITK_LIBRARIES}
                    ${VTK_LIBRARIES}
   EXECUTABLE_ONLY

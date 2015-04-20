@@ -159,6 +159,9 @@ int main( int argc, char * argv[] )
   args.bRAIImage     = bRAIImage;
   args.sRAIImagePath = sRAIImagePath;
 
+  args.bWriteThreshold  = bWriteThreshold;
+  args.sThresholdFolder = sThresholdFolder;
+
   if (bDebug) {
     // Output the arguments
     OutputAllSettings( argc, argv );

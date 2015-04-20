@@ -72,7 +72,7 @@ namespace AirwaySegmenter {
                typename TInput::PixelType & airwayThreshold )
   {
     if (args.argsFile != "None"){
-      StoreArgs(args);
+      WriteArgsToFile(args);
     }
     /* Typedefs */
     typedef float                      TFloatType;
@@ -540,6 +540,13 @@ namespace AirwaySegmenter {
     DEBUG_WRITE_LABEL_IMAGE( maskedOtsu );
 
     airwayThreshold = dThreshold;
+
+    if (args.bWriteThreshold) {
+      std::ofstream thresholdFile;
+
+      thresholdFile.open(args.sThresholdFolder.c_str());
+      thresholdFile << airwayThreshold;
+    }
 
     /***************************************************************/
     /*

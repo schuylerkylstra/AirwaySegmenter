@@ -259,6 +259,20 @@
             <label>Computed threshold</label>
             <description><![CDATA[Threshold automatically determined by the algorithm.]]></description>
         </double>
+        <boolean>
+            <name>bWriteThreshold</name>
+            <longflag>--threshold</longflag>
+            <label>Write Threshold Value</label>
+            <default>false</default>
+            <description><![CDATA[Output the image in RAI coordinates. If the input image is not in RAI coordinates, then it will be resampled. This output is the resampled image.]]></description>
+        </boolean>
+        <string>
+            <name>sThresholdFolder</name>
+            <longflag>--thresholdFolder</longflag>
+            <label>Destination folder for threshold value</label>
+            <default>None</default>
+            <description><![CDATA[Used only if Debug on. Choose the destination folder of the output debug images.]]></description>
+        </string>
     </parameters>
     <parameters advanced="true">
         <label>Optional Output</label>

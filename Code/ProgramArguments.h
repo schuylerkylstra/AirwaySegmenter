@@ -65,6 +65,9 @@ public:
 
   bool        bRAIImage;
   std::string sRAIImagePath;
+
+  bool        bWriteThreshold;
+  std::string sThresholdFolder;
 };
 
 } // end namespace AirwaySegmenter
