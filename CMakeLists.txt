@@ -43,15 +43,12 @@ include_directories(
 set( AirwaySegmenterCoreLib_SRCS
   Code/AirwaySegmenterCore.h
   Code/AirwaySegmenterCore.cxx
-)
 
-set( AirwayWriteArgs_SRCS
   Code/AirwayWriteArgs.h
   Code/AirwayWriteArgs.cxx
 )
 
 add_library( AirwaySegmenterCore ${AirwaySegmenterCoreLib_SRCS} )
-add_library( AirwayWriteArgs ${AirwayWriteArgs_SRCS})
 target_link_libraries(AirwaySegmenterCore 
   ${ITK_LIBRARIES}
   ${VTK_LIBRARIES}

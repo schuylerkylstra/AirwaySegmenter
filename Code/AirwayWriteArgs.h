@@ -9,7 +9,7 @@
 
 namespace AirwaySegmenter {
 
-  void StoreArgs( const ProgramArguments & args );
+  void WriteArgsToFile( const ProgramArguments & args );
 
 }
 
