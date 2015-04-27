@@ -201,13 +201,11 @@ namespace AirwaySegmenter {
 
     resampledInput = originalImage;
 
-    /* Write RAI Image if asked to */
-    if ( args.bRAIImage ) {
-      typename WriterType::Pointer writer = WriterType::New();
-      writer->SetInput( originalImage);
-      writer->SetFileName( args.sRAIImagePath.c_str() );
-      TRY_UPDATE( writer );
-    }
+    /* Write RAI Image */
+    typename WriterType::Pointer writer = WriterType::New();
+    writer->SetInput( originalImage);
+    writer->SetFileName( args.sRAIImagePath.c_str() );
+    TRY_UPDATE( writer );
 
     /* Initial Otsu threshold first to separate patient from background. */
     typedef itk::OtsuThresholdImageFilter< InputImageType, LabelImageType > OtsuThresholdFilterType;
@@ -544,7 +542,7 @@ namespace AirwaySegmenter {
     if (args.bWriteThreshold) {
       std::ofstream thresholdFile;
 
-      thresholdFile.open(args.sThresholdFolder.c_str());
+      thresholdFile.open(args.sThresholdFile.c_str());
       thresholdFile << airwayThreshold;
     }
 
